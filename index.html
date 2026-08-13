@@ -6,19 +6,26 @@
   <meta name="theme-color" content="#0F0599" />
   <meta name="robots" content="noindex,nofollow" />
   <title>UGS Chat — навчальний ШІ-помічник</title>
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=3" />
 </head>
 <body>
   <main class="app-shell" aria-label="UGS Chat">
     <header class="topbar">
       <div class="brand" aria-label="UGS Chat">
         <div class="brand-mark" aria-hidden="true">UGS</div>
-        <div>
+        <div class="brand-copy">
           <div class="brand-name">UGS Chat</div>
           <div class="brand-subtitle">Навчальний ШІ-помічник</div>
         </div>
       </div>
-      <button id="newChatBtn" class="button button-secondary" type="button">Новий чат</button>
+
+      <div class="header-actions">
+        <span class="top-status" title="Безпечний навчальний режим">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span>Безпечний режим</span>
+        </span>
+        <button id="newChatBtn" class="button button-secondary" type="button">Новий чат</button>
+      </div>
     </header>
 
     <section id="networkGate" class="gate" hidden>
@@ -34,12 +41,25 @@
       <div class="intro" id="introBlock">
         <span class="status-pill"><span class="status-dot"></span> Безпечний навчальний режим</span>
         <h1>Привіт! Що будемо робити?</h1>
-        <p>Можеш попросити мене щось пояснити, придумати, створити, перевірити ідею або допомогти з кодом.</p>
+        <p>Запитай, попроси пояснити, придумати, створити або допомогти розібратися.</p>
+
         <div class="starter-grid" aria-label="Приклади запитів">
-          <button class="starter" type="button" data-prompt="Поясни мені простими словами, чому небо блакитне.">Поясни тему</button>
-          <button class="starter" type="button" data-prompt="Допоможи придумати ідею простої гри, яку можна створити на HTML, CSS і JavaScript.">Придумай гру</button>
-          <button class="starter" type="button" data-prompt="Допоможи мені провести мозковий штурм. Постав кілька запитань, щоб я сам придумав кращу ідею.">Мозковий штурм</button>
-          <button class="starter" type="button" data-prompt="Допоможи розібратися з помилкою в моєму коді. Спочатку пояснюй, а не давай готову відповідь.">Допоможи з кодом</button>
+          <button class="starter" type="button" data-prompt="Поясни мені простими словами, чому небо блакитне.">
+            <span class="starter-icon" aria-hidden="true">✦</span>
+            <span><strong>Поясни тему</strong><small>Розібрати складне простими словами</small></span>
+          </button>
+          <button class="starter" type="button" data-prompt="Допоможи придумати ідею простої гри, яку можна створити на HTML, CSS і JavaScript.">
+            <span class="starter-icon" aria-hidden="true">⌘</span>
+            <span><strong>Придумай гру</strong><small>Ідея, механіки та перші кроки</small></span>
+          </button>
+          <button class="starter" type="button" data-prompt="Допоможи мені провести мозковий штурм. Постав кілька запитань, щоб я сам придумав кращу ідею.">
+            <span class="starter-icon" aria-hidden="true">◌</span>
+            <span><strong>Мозковий штурм</strong><small>Разом знайти сильнішу ідею</small></span>
+          </button>
+          <button class="starter" type="button" data-prompt="Допоможи розібратися з помилкою в моєму коді. Спочатку пояснюй, а не давай готову відповідь.">
+            <span class="starter-icon" aria-hidden="true">&lt;/&gt;</span>
+            <span><strong>Допоможи з кодом</strong><small>Знайти помилку та зрозуміти її</small></span>
+          </button>
         </div>
       </div>
 
@@ -47,16 +67,17 @@
 
       <div class="composer-wrap">
         <div id="privacyNotice" class="privacy-note">
-          Не вводь своє прізвище, адресу, телефон, email, пароль або інші особисті дані.
+          <span aria-hidden="true">◉</span>
+          <span>Не вводь прізвище, адресу, телефон, email, пароль або інші особисті дані.</span>
         </div>
         <form id="chatForm" class="composer">
           <label class="sr-only" for="promptInput">Повідомлення</label>
-          <textarea id="promptInput" rows="2" maxlength="1600" placeholder="Напиши повідомлення…" autocomplete="off" spellcheck="true"></textarea>
-          <button id="sendBtn" class="send-button" type="submit" aria-label="Надіслати">➜</button>
+          <textarea id="promptInput" rows="1" maxlength="1600" placeholder="Напиши повідомлення…" autocomplete="off" spellcheck="true"></textarea>
+          <button id="sendBtn" class="send-button" type="submit" aria-label="Надіслати">↑</button>
         </form>
         <div class="composer-meta">
           <span id="counter">20 запитів залишилося</span>
-          <span>Історія не зберігається UGS Chat</span>
+          <span>UGS Chat не зберігає історію цього чату</span>
         </div>
       </div>
     </section>
@@ -78,6 +99,6 @@
     </div>
   </dialog>
 
-  <script src="app.js?v=4"></script>
+  <script src="app.js?v=3"></script>
 </body>
 </html>

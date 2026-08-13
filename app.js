@@ -14,6 +14,7 @@
   };
 
   const el = {
+    shell: document.querySelector(".app-shell"),
     gate: document.querySelector("#networkGate"),
     gateMessage: document.querySelector("#networkMessage"),
     chat: document.querySelector("#chatApp"),
@@ -31,16 +32,14 @@
     closePrivacy: document.querySelector("#closePrivacyBtn")
   };
 
-  function apiConfigured() {
-    return API_URL && !API_URL.includes("YOUR-WORKER") && /^https:\/\//i.test(API_URL);
+  function setConversationMode(active) {
+    el.chat.classList.toggle("conversation-active", active);
+    el.shell.classList.toggle("has-conversation", active);
+    document.body.classList.toggle("has-conversation", active);
+    el.intro.hidden = active;
   }
 
   async function checkNetwork() {
-    if (!apiConfigured()) {
-      showGate("UGS Chat ще не підключений до шкільного шлюзу. Вкажіть адресу Worker у config.js.");
-      return;
-    }
-
     el.retry.disabled = true;
     try {
       const response = await fetch(`${API_URL}/health`, { method: "GET", cache: "no-store" });
@@ -49,6 +48,7 @@
         state.networkAllowed = true;
         el.gate.hidden = true;
         el.chat.hidden = false;
+        setConversationMode(state.messages.length > 0);
         el.input.focus();
       } else {
         showGate(data.message || "UGS Chat працює лише у шкільній мережі UGS.");
@@ -81,21 +81,34 @@
     const mod10 = n % 10;
     const mod100 = n % 100;
     if (mod10 === 1 && mod100 !== 11) return "запит";
-    if ([2,3,4].includes(mod10) && ![12,13,14].includes(mod100)) return "запити";
+    if ([2, 3, 4].includes(mod10) && ![12, 13, 14].includes(mod100)) return "запити";
     return "запитів";
   }
 
   function addMessage(role, text, extraClass = "") {
     const row = document.createElement("div");
     row.className = `message ${role} ${extraClass}`.trim();
+
     const bubble = document.createElement("div");
     bubble.className = "bubble";
     bubble.textContent = text;
+
     row.appendChild(bubble);
     el.messages.appendChild(row);
-    el.intro.hidden = state.messages.length > 0 || role !== "system";
-    row.scrollIntoView({ behavior: "smooth", block: "end" });
+
+    if (role !== "system" || state.messages.length > 0) {
+      setConversationMode(true);
+    }
+
+    requestAnimationFrame(() => {
+      row.scrollIntoView({ behavior: "smooth", block: "end" });
+    });
+
     return row;
+  }
+
+  function resetInputHeight() {
+    el.input.style.height = "auto";
   }
 
   function resetChat() {
@@ -104,12 +117,14 @@
     state.busy = false;
     state.sessionId = crypto.randomUUID();
     el.messages.replaceChildren();
-    el.intro.hidden = false;
+    setConversationMode(false);
     el.input.disabled = false;
     el.send.disabled = false;
     el.input.value = "";
     el.input.placeholder = "Напиши повідомлення…";
+    resetInputHeight();
     updateCounter();
+    window.scrollTo({ top: 0, behavior: "smooth" });
     el.input.focus();
   }
 
@@ -120,11 +135,12 @@
     state.busy = true;
     el.send.disabled = true;
     el.input.disabled = true;
-    el.intro.hidden = true;
+    setConversationMode(true);
 
     state.messages.push({ role: "user", content: clean });
     addMessage("user", clean);
     el.input.value = "";
+    resetInputHeight();
 
     const typing = addMessage("assistant", "Думаю…", "typing");
 
@@ -202,6 +218,7 @@
   el.starters.forEach((button) => {
     button.addEventListener("click", () => {
       el.input.value = button.dataset.prompt || "";
+      el.input.dispatchEvent(new Event("input"));
       el.input.focus();
     });
   });
@@ -211,8 +228,13 @@
   el.privacyBtn.addEventListener("click", () => el.privacyDialog.showModal());
   el.closePrivacy.addEventListener("click", () => el.privacyDialog.close());
 
+  el.privacyDialog.addEventListener("click", (event) => {
+    if (event.target === el.privacyDialog) el.privacyDialog.close();
+  });
+
   // Історія навмисно НЕ пишеться у localStorage/sessionStorage/IndexedDB.
   // Після перезавантаження або закриття вкладки JS-пам'ять зникає.
   updateCounter();
+  setConversationMode(false);
   checkNetwork();
 })();
