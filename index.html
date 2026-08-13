@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#0F0599" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>UGS Chat — навчальний ШІ-помічник</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="app-shell" aria-label="UGS Chat">
+    <header class="topbar">
+      <div class="brand" aria-label="UGS Chat">
+        <div class="brand-mark" aria-hidden="true">UGS</div>
+        <div>
+          <div class="brand-name">UGS Chat</div>
+          <div class="brand-subtitle">Навчальний ШІ-помічник</div>
+        </div>
+      </div>
+      <button id="newChatBtn" class="button button-secondary" type="button">Новий чат</button>
+    </header>
+
+    <section id="networkGate" class="gate" hidden>
+      <div class="gate-card">
+        <div class="gate-icon" aria-hidden="true">🔒</div>
+        <h1>UGS Chat доступний у школі</h1>
+        <p id="networkMessage">Підключись до шкільної мережі UGS і онови сторінку.</p>
+        <button id="retryBtn" class="button button-primary" type="button">Перевірити ще раз</button>
+      </div>
+    </section>
+
+    <section id="chatApp" class="chat-app" hidden>
+      <div class="intro" id="introBlock">
+        <span class="status-pill"><span class="status-dot"></span> Безпечний навчальний режим</span>
+        <h1>Привіт! Що будемо робити?</h1>
+        <p>Можеш попросити мене щось пояснити, придумати, створити, перевірити ідею або допомогти з кодом.</p>
+        <div class="starter-grid" aria-label="Приклади запитів">
+          <button class="starter" type="button" data-prompt="Поясни мені простими словами, чому небо блакитне.">Поясни тему</button>
+          <button class="starter" type="button" data-prompt="Допоможи придумати ідею простої гри, яку можна створити на HTML, CSS і JavaScript.">Придумай гру</button>
+          <button class="starter" type="button" data-prompt="Допоможи мені провести мозковий штурм. Постав кілька запитань, щоб я сам придумав кращу ідею.">Мозковий штурм</button>
+          <button class="starter" type="button" data-prompt="Допоможи розібратися з помилкою в моєму коді. Спочатку пояснюй, а не давай готову відповідь.">Допоможи з кодом</button>
+        </div>
+      </div>
+
+      <div id="messages" class="messages" role="log" aria-live="polite" aria-label="Повідомлення чату"></div>
+
+      <div class="composer-wrap">
+        <div id="privacyNotice" class="privacy-note">
+          Не вводь своє прізвище, адресу, телефон, email, пароль або інші особисті дані.
+        </div>
+        <form id="chatForm" class="composer">
+          <label class="sr-only" for="promptInput">Повідомлення</label>
+          <textarea id="promptInput" rows="2" maxlength="1600" placeholder="Напиши повідомлення…" autocomplete="off" spellcheck="true"></textarea>
+          <button id="sendBtn" class="send-button" type="submit" aria-label="Надіслати">➜</button>
+        </form>
+        <div class="composer-meta">
+          <span id="counter">20 запитів залишилося</span>
+          <span>Історія не зберігається UGS Chat</span>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <span>UGS Chat · Ukrainian Global School</span>
+      <button id="privacyBtn" class="link-button" type="button">Про приватність</button>
+    </footer>
+  </main>
+
+  <dialog id="privacyDialog">
+    <div class="dialog-content">
+      <button class="dialog-close" id="closePrivacyBtn" aria-label="Закрити" type="button">×</button>
+      <h2>Як працює приватність</h2>
+      <p><strong>UGS Chat не створює обліковий запис учня і не записує історію розмови у власну базу.</strong> Поточний діалог існує лише у відкритій вкладці браузера.</p>
+      <p>Після закриття або перезавантаження сторінки локальна історія цього чату зникає.</p>
+      <p>Щоб отримати відповідь, текст запиту передається через захищений шкільний шлюз до OpenAI API. Для API діють окремі правила обробки та технічного зберігання даних постачальником.</p>
+      <p>Тому не вводь персональні, медичні, фінансові або інші конфіденційні дані.</p>
+    </div>
+  </dialog>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
