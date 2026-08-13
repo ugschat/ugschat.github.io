@@ -277,12 +277,18 @@
     codeBtn.className = "artifact-tab";
     codeBtn.textContent = "Код";
 
+    const fullscreenBtn = document.createElement("button");
+    fullscreenBtn.type = "button";
+    fullscreenBtn.className = "artifact-fullscreen-btn";
+    fullscreenBtn.innerHTML = '<span class="artifact-fullscreen-icon" aria-hidden="true">⛶</span><span>Розгорнути</span>';
+    fullscreenBtn.setAttribute("aria-label", "Розгорнути проєкт на весь екран");
+
     const copyBtn = document.createElement("button");
     copyBtn.type = "button";
     copyBtn.className = "artifact-copy";
     copyBtn.textContent = "Копіювати";
 
-    actions.append(previewBtn, codeBtn, copyBtn);
+    actions.append(previewBtn, codeBtn, fullscreenBtn, copyBtn);
     header.append(meta, actions);
 
     const body = document.createElement("div");
@@ -322,6 +328,33 @@
       previewBtn.classList.remove("active");
       scrollConversationToBottom(false);
     });
+
+    function setArtifactFullscreen(active) {
+      card.classList.toggle("artifact-fullscreen", active);
+      document.body.classList.toggle("artifact-fullscreen-open", active);
+      fullscreenBtn.classList.toggle("active", active);
+      fullscreenBtn.innerHTML = active
+        ? '<span class="artifact-fullscreen-icon" aria-hidden="true">↙</span><span>Згорнути</span>'
+        : '<span class="artifact-fullscreen-icon" aria-hidden="true">⛶</span><span>Розгорнути</span>';
+      fullscreenBtn.setAttribute("aria-label", active ? "Вийти з повноекранного перегляду" : "Розгорнути проєкт на весь екран");
+      if (active) {
+        preview.hidden = false;
+        codePanel.hidden = true;
+        previewBtn.classList.add("active");
+        codeBtn.classList.remove("active");
+      }
+    }
+
+    fullscreenBtn.addEventListener("click", () => {
+      setArtifactFullscreen(!card.classList.contains("artifact-fullscreen"));
+    });
+
+    const onEscape = (event) => {
+      if (event.key === "Escape" && card.classList.contains("artifact-fullscreen")) {
+        setArtifactFullscreen(false);
+      }
+    };
+    document.addEventListener("keydown", onEscape);
 
     copyBtn.addEventListener("click", async () => {
       try {
@@ -364,11 +397,13 @@
 
   function buildSandboxedHtml(html) {
     const csp = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data: blob:; media-src 'none'; connect-src 'none'; font-src 'none'; frame-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'">`;
+    const viewport = `<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">`;
+    const responsiveGuard = `<style id="ugs-responsive-guard">html,body{max-width:100%;min-width:0;overflow-x:hidden}*,*::before,*::after{box-sizing:border-box}img,svg,video,canvas{max-width:100%}img,svg,video{height:auto}table{max-width:100%}pre,code{max-width:100%;white-space:pre-wrap;overflow-wrap:anywhere}body{margin:0}body *{max-width:100%}</style>`;
     const source = String(html || "");
     if (/<head[\s>]/i.test(source)) {
-      return source.replace(/<head([^>]*)>/i, `<head$1>${csp}`);
+      return source.replace(/<head([^>]*)>/i, `<head$1>${csp}${viewport}${responsiveGuard}`);
     }
-    return `<!doctype html><html><head><meta charset="utf-8">${csp}<meta name="viewport" content="width=device-width,initial-scale=1"></head><body>${source}</body></html>`;
+    return `<!doctype html><html><head><meta charset="utf-8">${csp}${viewport}${responsiveGuard}</head><body>${source}</body></html>`;
   }
 
   function shouldIncludeArtifactContext(text) {
