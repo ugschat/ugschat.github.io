@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const API_URL = window.UGS_CHAT_CONFIG?.API_URL;
+  const API_URL = "https://ugs-chat-api.kysliakov.workers.dev";
   const MAX_TURNS = 20;
   const MAX_HISTORY_ITEMS = 40;
 
