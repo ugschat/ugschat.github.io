@@ -6,13 +6,21 @@
   <meta name="theme-color" content="#ffffff" />
   <meta name="robots" content="noindex,nofollow" />
   <title>UGS Chat — навчальний ШІ-помічник</title>
+
+  <link rel="icon" href="/favicon.ico" sizes="32x32" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="manifest" href="/site.webmanifest" />
+
   <link rel="stylesheet" href="styles.css?v=14" />
 </head>
 <body>
   <main class="app-shell" aria-label="UGS Chat">
     <header class="topbar">
       <div class="brand" aria-label="UGS Chat">
-        <div class="brand-mark" aria-hidden="true">UGS</div>
+        <div class="brand-mark" aria-hidden="true">
+          <img class="brand-logo" src="icons/logo-white-128.png" alt="" width="128" height="128" decoding="async" />
+        </div>
         <div class="brand-copy">
           <div class="brand-name">UGS Chat</div>
           <div class="brand-subtitle">Навчальний ШІ-помічник</div>
@@ -31,7 +39,9 @@
 
     <section id="networkGate" class="gate" hidden>
       <div class="gate-card">
-        <div class="gate-lock" aria-hidden="true">UGS</div>
+        <div class="gate-lock" aria-hidden="true">
+          <img class="brand-logo" src="icons/logo-white-128.png" alt="" width="128" height="128" decoding="async" />
+        </div>
         <h1>UGS Chat доступний у школі</h1>
         <p id="networkMessage">Підключись до шкільної мережі UGS і спробуй ще раз.</p>
         <button id="retryBtn" class="primary-button" type="button">Перевірити ще раз</button>

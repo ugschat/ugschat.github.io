@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="UGS Chat">
+  <title>UGS Chat</title>
+  <style>
+    .mark { fill: #0f0599; }
+    @media (prefers-color-scheme: dark) {
+      .mark { fill: #ffffff; }
+    }
+  </style>
+  <path class="mark" d="M50 0C50 18.9 81.1 50 100 50C81.1 50 50 81.1 50 100C50 81.1 18.9 50 0 50C18.9 50 50 18.9 50 0Z"/>
+</svg>
