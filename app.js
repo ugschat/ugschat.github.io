@@ -3,8 +3,9 @@
 
   const API_URL = "https://ugs-chat-api.kysliakov.workers.dev";
   const MAX_TURNS = 20;
-  const MAX_HISTORY_ITEMS = 40;
+  const MAX_HISTORY_ITEMS = 12;
   const MOBILE_DAILY_CHAT_LIMIT = 5;
+  const MAX_ARTIFACT_GENERATIONS = 3;
   const MOBILE_DEVICE_KEY = "ugs_chat_mobile_device_v1";
 
   const state = {
@@ -17,7 +18,10 @@
     deviceId: null,
     mobileSessionsRemaining: null,
     mobileDailyBlocked: false,
-    mobileSessionActivated: false
+    mobileSessionActivated: false,
+    lastArtifact: null,
+    artifactsUsed: 0,
+    artifactGenerationsRemaining: MAX_ARTIFACT_GENERATIONS
   };
 
   const el = {
@@ -178,6 +182,151 @@
     return row;
   }
 
+  function addArtifactMessage(text, artifact) {
+    const row = document.createElement("div");
+    row.className = "message assistant artifact-message";
+
+    const wrap = document.createElement("div");
+    wrap.className = "artifact-wrap";
+
+    if (text) {
+      const bubble = document.createElement("div");
+      bubble.className = "bubble artifact-intro";
+      bubble.textContent = text;
+      wrap.appendChild(bubble);
+    }
+
+    const card = document.createElement("section");
+    card.className = "artifact-card";
+
+    const header = document.createElement("div");
+    header.className = "artifact-header";
+
+    const meta = document.createElement("div");
+    meta.className = "artifact-meta";
+
+    const badge = document.createElement("span");
+    badge.className = `artifact-badge artifact-${artifact.type}`;
+    badge.textContent = artifactTypeLabel(artifact.type);
+
+    const title = document.createElement("strong");
+    title.className = "artifact-title";
+    title.textContent = artifact.title || artifactTypeLabel(artifact.type);
+
+    meta.append(badge, title);
+
+    const actions = document.createElement("div");
+    actions.className = "artifact-actions";
+
+    const previewBtn = document.createElement("button");
+    previewBtn.type = "button";
+    previewBtn.className = "artifact-tab active";
+    previewBtn.textContent = "Перегляд";
+
+    const codeBtn = document.createElement("button");
+    codeBtn.type = "button";
+    codeBtn.className = "artifact-tab";
+    codeBtn.textContent = "Код";
+
+    const copyBtn = document.createElement("button");
+    copyBtn.type = "button";
+    copyBtn.className = "artifact-copy";
+    copyBtn.textContent = "Копіювати";
+
+    actions.append(previewBtn, codeBtn, copyBtn);
+    header.append(meta, actions);
+
+    const body = document.createElement("div");
+    body.className = "artifact-body";
+
+    const preview = document.createElement("div");
+    preview.className = "artifact-preview";
+
+    const frame = document.createElement("iframe");
+    frame.className = "artifact-frame";
+    frame.title = `Перегляд: ${artifact.title || artifactTypeLabel(artifact.type)}`;
+    frame.setAttribute("sandbox", "allow-scripts");
+    frame.setAttribute("referrerpolicy", "no-referrer");
+    frame.srcdoc = buildSandboxedHtml(artifact.html);
+    preview.appendChild(frame);
+
+    const codePanel = document.createElement("div");
+    codePanel.className = "artifact-code";
+    codePanel.hidden = true;
+    const pre = document.createElement("pre");
+    const code = document.createElement("code");
+    code.textContent = artifact.html;
+    pre.appendChild(code);
+    codePanel.appendChild(pre);
+
+    previewBtn.addEventListener("click", () => {
+      preview.hidden = false;
+      codePanel.hidden = true;
+      previewBtn.classList.add("active");
+      codeBtn.classList.remove("active");
+    });
+
+    codeBtn.addEventListener("click", () => {
+      preview.hidden = true;
+      codePanel.hidden = false;
+      codeBtn.classList.add("active");
+      previewBtn.classList.remove("active");
+      scrollConversationToBottom(false);
+    });
+
+    copyBtn.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(artifact.html);
+        const old = copyBtn.textContent;
+        copyBtn.textContent = "Скопійовано";
+        setTimeout(() => { copyBtn.textContent = old; }, 1300);
+      } catch {
+        copyBtn.textContent = "Не вдалося";
+      }
+    });
+
+    body.append(preview, codePanel);
+    card.append(header, body);
+
+    if (Number.isInteger(artifact.generationsRemaining)) {
+      const limitNote = document.createElement("div");
+      limitNote.className = "artifact-limit-note";
+      const n = Math.max(0, artifact.generationsRemaining);
+      limitNote.textContent = n > 0
+        ? `Ще ${n} ${n === 1 ? "генерація проєкту" : "генерації проєктів"} у цьому чаті`
+        : "Ліміт проєктів у цьому чаті використано · текстовий чат працює далі";
+      card.appendChild(limitNote);
+    }
+
+    wrap.appendChild(card);
+    row.appendChild(wrap);
+    el.messages.appendChild(row);
+
+    setConversationMode(true);
+    scrollConversationToBottom();
+    return row;
+  }
+
+  function artifactTypeLabel(type) {
+    if (type === "game") return "Гра";
+    if (type === "presentation") return "Презентація";
+    return "Сайт";
+  }
+
+  function buildSandboxedHtml(html) {
+    const csp = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data: blob:; media-src 'none'; connect-src 'none'; font-src 'none'; frame-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'">`;
+    const source = String(html || "");
+    if (/<head[\s>]/i.test(source)) {
+      return source.replace(/<head([^>]*)>/i, `<head$1>${csp}`);
+    }
+    return `<!doctype html><html><head><meta charset="utf-8">${csp}<meta name="viewport" content="width=device-width,initial-scale=1"></head><body>${source}</body></html>`;
+  }
+
+  function shouldIncludeArtifactContext(text) {
+    if (!state.lastArtifact) return false;
+    return /(зміни|змінити|додай|додати|прибери|видали|виправ|онови|перероби|перепиши|зроби\s+(?:його|її|це|фон|кнопк|текст|гру|сайт|презентац)|change|add|remove|fix|update|redo|make\s+it)/iu.test(text);
+  }
+
   function addSupportMessage(text) {
     const row = document.createElement("div");
     row.className = "message support";
@@ -258,6 +407,9 @@
     state.busy = false;
     state.sessionId = crypto.randomUUID();
     state.mobileSessionActivated = false;
+    state.lastArtifact = null;
+    state.artifactsUsed = 0;
+    state.artifactGenerationsRemaining = MAX_ARTIFACT_GENERATIONS;
     el.messages.replaceChildren();
     setConversationMode(false);
     el.input.disabled = false;
@@ -297,7 +449,15 @@
           turnNumber: state.turns + 1,
           history: state.messages.slice(-MAX_HISTORY_ITEMS),
           clientMobile: state.isMobile,
-          deviceId: state.isMobile ? state.deviceId : null
+          deviceId: state.isMobile ? state.deviceId : null,
+          artifactCount: state.artifactsUsed,
+          artifactContext: shouldIncludeArtifactContext(clean) && state.lastArtifact
+            ? {
+                type: state.lastArtifact.type,
+                title: state.lastArtifact.title,
+                html: state.lastArtifact.html
+              }
+            : null
         })
       });
 
@@ -313,6 +473,13 @@
         if (data.code === "PII_DETECTED") {
           state.messages.pop();
           addGuardrailMessage(data.message || "Прибери особисті дані та спробуй ще раз.", "safety");
+          return;
+        }
+        if (data.code === "ARTIFACT_LIMIT") {
+          state.messages.pop();
+          state.artifactGenerationsRemaining = 0;
+          state.artifactsUsed = MAX_ARTIFACT_GENERATIONS;
+          addGuardrailMessage(data.message || "У цьому чаті вже використано 3 генерації проєктів. Звичайні текстові запитання залишаються доступними.", "focus");
           return;
         }
         if (data.code === "MOBILE_SESSION_LIMIT") {
@@ -358,6 +525,20 @@
         addSupportMessage(answer);
       } else if (kind === "safety" || kind === "focus") {
         addGuardrailMessage(answer, kind);
+      } else if (data.artifact && typeof data.artifact.html === "string") {
+        const remaining = Number.isInteger(data.artifactGenerationsRemaining)
+          ? Math.max(0, data.artifactGenerationsRemaining)
+          : Math.max(0, state.artifactGenerationsRemaining - 1);
+        state.artifactGenerationsRemaining = remaining;
+        state.artifactsUsed = MAX_ARTIFACT_GENERATIONS - remaining;
+        const artifact = {
+          type: ["site", "game", "presentation"].includes(data.artifact.type) ? data.artifact.type : "site",
+          title: String(data.artifact.title || "Новий проєкт"),
+          html: String(data.artifact.html),
+          generationsRemaining: remaining
+        };
+        state.lastArtifact = artifact;
+        addArtifactMessage(answer, artifact);
       } else {
         addMessage("assistant", answer, kind === "local_education" ? "local-education" : "");
       }
