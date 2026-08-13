@@ -814,6 +814,7 @@ body.has-conversation .conversation-column { padding-bottom: 22px; }
 }
 .artifact-tab,
 .artifact-copy,
+.artifact-download,
 .artifact-fullscreen-btn {
   min-height: 32px;
   padding: 0 9px;
@@ -826,6 +827,7 @@ body.has-conversation .conversation-column { padding-bottom: 22px; }
 }
 .artifact-tab:hover,
 .artifact-copy:hover,
+.artifact-download:hover,
 .artifact-fullscreen-btn:hover { background: var(--surface-hover); color: var(--text); }
 .artifact-tab.active {
   color: var(--brand);
@@ -939,7 +941,8 @@ body.artifact-fullscreen-open {
   .artifact-wrap { width: calc(100% - 38px); }
   .artifact-header { align-items: flex-start; flex-direction: column; gap: 7px; }
   .artifact-actions { width: 100%; flex-wrap: wrap; }
-  .artifact-copy { margin-left: auto; }
+  .artifact-download { margin-left: auto; }
+  .artifact-copy { margin-left: 0; }
   .artifact-fullscreen-btn span:last-child { display: none; }
   .artifact-fullscreen-btn { min-width: 36px; justify-content: center; padding-inline: 8px; }
   .artifact-frame { height: clamp(330px, 58vh, 460px); }

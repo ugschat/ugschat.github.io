@@ -3,16 +3,17 @@
 
   const API_URL = "https://ugs-chat-api.kysliakov.workers.dev";
   const MAX_TURNS = 20;
-  const MAX_HISTORY_ITEMS = 12;
   const MOBILE_DAILY_CHAT_LIMIT = 5;
   const MAX_ARTIFACT_GENERATIONS = 3;
   const MOBILE_DEVICE_KEY = "ugs_chat_mobile_device_v1";
 
   const state = {
-    messages: [],
+    uiMessages: [],
     turns: 0,
     busy: false,
+    sessionBroken: false,
     sessionId: crypto.randomUUID(),
+    conversationState: null,
     networkAllowed: false,
     isMobile: detectMobileDevice(),
     deviceId: null,
@@ -120,7 +121,7 @@
         state.networkAllowed = true;
         el.gate.hidden = true;
         el.chat.hidden = false;
-        setConversationMode(state.messages.length > 0 || el.messages.children.length > 0);
+        setConversationMode(state.uiMessages.length > 0 || el.messages.children.length > 0);
         el.input.focus();
       } else {
         showGate(data.message || "UGS Chat працює лише у шкільній мережі UGS.");
@@ -183,7 +184,13 @@
   }
 
   function looksLikeArtifactRequest(text) {
-    return /(створ|зроб|згенер|побуд|розроб).{0,32}(гру|гра|сайт|веб[- ]?сторін|презентац|слайд)|(?:гра|сайт|презентац).{0,24}(html|javascript|css)/iu.test(text);
+    const s = String(text || "");
+    const strong = /(створи|зроби|згенеруй|побудуй|розроби|create|build|make|generate)/iu;
+    const noun = /(гру|гра|сайт|веб[- ]?сторін|презентац|слайд|game|website|presentation)/iu;
+    const tech = /(html|javascript|css|\bjs\b|код)/iu;
+    const near = new RegExp(`(?:${strong.source})[\s\S]{0,52}(?:${noun.source})|(?:${noun.source})[\s\S]{0,52}(?:${strong.source})`, "iu");
+    if (near.test(s)) return true;
+    return tech.test(s) && /(напиши|write).{0,52}(гру|сайт|презентац|game|website|presentation)/iu.test(s);
   }
 
   function addThinkingMessage(requestText) {
@@ -283,12 +290,18 @@
     fullscreenBtn.innerHTML = '<span class="artifact-fullscreen-icon" aria-hidden="true">⛶</span><span>Розгорнути</span>';
     fullscreenBtn.setAttribute("aria-label", "Розгорнути проєкт на весь екран");
 
+    const downloadBtn = document.createElement("button");
+    downloadBtn.type = "button";
+    downloadBtn.className = "artifact-download";
+    downloadBtn.textContent = "Завантажити";
+    downloadBtn.setAttribute("aria-label", "Завантажити проєкт як HTML-файл");
+
     const copyBtn = document.createElement("button");
     copyBtn.type = "button";
     copyBtn.className = "artifact-copy";
     copyBtn.textContent = "Копіювати";
 
-    actions.append(previewBtn, codeBtn, fullscreenBtn, copyBtn);
+    actions.append(previewBtn, codeBtn, fullscreenBtn, downloadBtn, copyBtn);
     header.append(meta, actions);
 
     const body = document.createElement("div");
@@ -356,6 +369,18 @@
     };
     document.addEventListener("keydown", onEscape);
 
+    downloadBtn.addEventListener("click", () => {
+      const blob = new Blob([buildSandboxedHtml(artifact.html)], { type: "text/html;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = artifactDownloadFilename(artifact);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1200);
+    });
+
     copyBtn.addEventListener("click", async () => {
       try {
         await navigator.clipboard.writeText(artifact.html);
@@ -395,15 +420,31 @@
     return "Сайт";
   }
 
+  function artifactDownloadFilename(artifact) {
+    const fallback = artifact.type === "game"
+      ? "UGS_гра"
+      : artifact.type === "presentation"
+        ? "UGS_презентація"
+        : "UGS_сайт";
+    const base = String(artifact.title || fallback)
+      .replace(/[\/:*?"<>|]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .replace(/[. ]+$/g, "")
+      .slice(0, 80) || fallback;
+    return `${base}.html`;
+  }
+
   function buildSandboxedHtml(html) {
     const csp = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data: blob:; media-src 'none'; connect-src 'none'; font-src 'none'; frame-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'">`;
     const viewport = `<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">`;
-    const responsiveGuard = `<style id="ugs-responsive-guard">html,body{max-width:100%;min-width:0;overflow-x:hidden}*,*::before,*::after{box-sizing:border-box}img,svg,video,canvas{max-width:100%}img,svg,video{height:auto}table{max-width:100%}pre,code{max-width:100%;white-space:pre-wrap;overflow-wrap:anywhere}body{margin:0}body *{max-width:100%}</style>`;
+    const responsiveGuard = `<style id="ugs-responsive-guard">html,body{max-width:100%;min-width:0;overflow-x:hidden;scroll-behavior:smooth}*,*::before,*::after{box-sizing:border-box}img,svg,video,canvas{max-width:100%}img,svg,video{height:auto}table{max-width:100%}pre,code{max-width:100%;white-space:pre-wrap;overflow-wrap:anywhere}body{margin:0}body *{max-width:100%}</style>`;
+    const navigationGuard = `<script id="ugs-navigation-guard">(()=>{const scrollToHash=(raw)=>{if(!raw||raw==="#")return;let id=raw.slice(1);try{id=decodeURIComponent(id)}catch{}const target=document.getElementById(id);if(target)target.scrollIntoView({behavior:"smooth",block:"start"})};document.addEventListener("click",(event)=>{const anchor=event.target&&event.target.closest?event.target.closest("a[href]"):null;if(!anchor)return;const href=(anchor.getAttribute("href")||"").trim();if(href.startsWith("#")){event.preventDefault();scrollToHash(href);return}event.preventDefault()},true);try{window.open=()=>null}catch{}document.addEventListener("submit",(event)=>event.preventDefault(),true)})();</script>`;
     const source = String(html || "");
     if (/<head[\s>]/i.test(source)) {
-      return source.replace(/<head([^>]*)>/i, `<head$1>${csp}${viewport}${responsiveGuard}`);
+      return source.replace(/<head([^>]*)>/i, `<head$1>${csp}${viewport}${responsiveGuard}${navigationGuard}`);
     }
-    return `<!doctype html><html><head><meta charset="utf-8">${csp}${viewport}${responsiveGuard}</head><body>${source}</body></html>`;
+    return `<!doctype html><html><head><meta charset="utf-8">${csp}${viewport}${responsiveGuard}${navigationGuard}</head><body>${source}</body></html>`;
   }
 
   function shouldIncludeArtifactContext(text) {
@@ -486,10 +527,12 @@
       return;
     }
 
-    state.messages = [];
+    state.uiMessages = [];
     state.turns = 0;
     state.busy = false;
+    state.sessionBroken = false;
     state.sessionId = crypto.randomUUID();
+    state.conversationState = null;
     state.mobileSessionActivated = false;
     state.lastArtifact = null;
     state.artifactsUsed = 0;
@@ -517,7 +560,7 @@
     setConversationMode(true);
 
     const userHistoryItem = { role: "user", content: clean };
-    state.messages.push(userHistoryItem);
+    state.uiMessages.push(userHistoryItem);
     addMessage("user", clean);
     el.input.value = "";
     resetInputHeight();
@@ -530,17 +573,12 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sessionId: state.sessionId,
-          turnNumber: state.turns + 1,
-          history: state.messages.slice(-MAX_HISTORY_ITEMS),
+          message: clean,
+          conversationState: state.conversationState,
           clientMobile: state.isMobile,
           deviceId: state.isMobile ? state.deviceId : null,
-          artifactCount: state.artifactsUsed,
-          artifactContext: shouldIncludeArtifactContext(clean) && state.lastArtifact
-            ? {
-                type: state.lastArtifact.type,
-                title: state.lastArtifact.title,
-                html: state.lastArtifact.html
-              }
+          artifactState: shouldIncludeArtifactContext(clean) && state.lastArtifact
+            ? state.lastArtifact.stateToken || null
             : null
         })
       });
@@ -550,24 +588,56 @@
 
       if (!response.ok) {
         if (response.status === 403 && data.code === "NETWORK_ONLY") {
-          state.messages.pop();
+          state.uiMessages.pop();
           showGate(data.message || "UGS Chat працює лише у шкільній мережі UGS.");
           return;
         }
         if (data.code === "PII_DETECTED") {
-          state.messages.pop();
+          state.uiMessages.pop();
           addGuardrailMessage(data.message || "Прибери особисті дані та спробуй ще раз.", "safety");
           return;
         }
+        if (data.code === "TURN_LIMIT") {
+          state.uiMessages.pop();
+          state.turns = MAX_TURNS;
+          updateCounter();
+          addGuardrailMessage(data.message || "У цьому чаті вже використано 20 запитів. Почни новий чат, щоб продовжити.", "focus");
+          return;
+        }
+        if (data.code === "RATE_LIMIT" || data.code === "SCHOOL_RATE_LIMIT") {
+          state.uiMessages.pop();
+          addGuardrailMessage(data.message || "Зараз надто багато запитів. Зачекай трохи й спробуй ще раз.", "focus");
+          return;
+        }
+        if (data.code === "SCHOOL_DAILY_LIMIT") {
+          state.uiMessages.pop();
+          addGuardrailMessage(data.message || "UGS Chat досяг добового ліміту використання. Звернися до вчителя.", "focus");
+          return;
+        }
+        if (["STATE_REQUIRED", "STATE_INVALID", "STATE_EXPIRED"].includes(data.code)) {
+          state.uiMessages.pop();
+          state.sessionBroken = true;
+          el.input.disabled = true;
+          el.send.disabled = true;
+          el.input.placeholder = "Почни новий чат";
+          addGuardrailMessage(data.message || "Не вдалося перевірити стан цього чату. Почни новий чат.", "focus");
+          return;
+        }
+        if (["ARTIFACT_STATE_INVALID", "ARTIFACT_STATE_EXPIRED"].includes(data.code)) {
+          state.uiMessages.pop();
+          state.lastArtifact = null;
+          addGuardrailMessage(data.message || "Попередній проєкт більше не можна безпечно редагувати в цій сесії. Створи новий проєкт; звичайний чат продовжує працювати.", "focus");
+          return;
+        }
         if (data.code === "ARTIFACT_LIMIT") {
-          state.messages.pop();
+          state.uiMessages.pop();
           state.artifactGenerationsRemaining = 0;
           state.artifactsUsed = MAX_ARTIFACT_GENERATIONS;
           addGuardrailMessage(data.message || "У цьому чаті вже використано 3 генерації проєктів. Звичайні текстові запитання залишаються доступними.", "focus");
           return;
         }
         if (data.code === "MOBILE_SESSION_LIMIT") {
-          state.messages.pop();
+          state.uiMessages.pop();
           state.mobileDailyBlocked = true;
           state.mobileSessionsRemaining = 0;
           updateMobileLimitUI();
@@ -578,9 +648,17 @@
           return;
         }
 
-        state.messages.pop();
+        state.uiMessages.pop();
         addMessage("system", `${data.message || "Сталася технічна помилка."} Цей запит не зараховано.`, "error");
         return;
+      }
+
+      if (typeof data.conversationState === "string" && data.conversationState) {
+        state.conversationState = data.conversationState;
+      }
+      if (Number.isInteger(data.turnsUsed)) {
+        state.turns = Math.max(0, Math.min(MAX_TURNS, data.turnsUsed));
+        updateCounter();
       }
 
       if (state.isMobile && Number.isInteger(data.mobileSessionsRemaining)) {
@@ -592,7 +670,7 @@
 
       const answer = String(data.answer || "").trim();
       if (!answer) {
-        state.messages.pop();
+        state.uiMessages.pop();
         addMessage("system", "Не вдалося отримати текст відповіді. Цей запит не зараховано — спробуй ще раз.", "error");
         return;
       }
@@ -601,8 +679,8 @@
       const includeInHistory = data.includeInHistory !== false;
       const kind = String(data.kind || "model");
 
-      if (!includeInHistory && state.messages.at(-1) === userHistoryItem) {
-        state.messages.pop();
+      if (!includeInHistory && state.uiMessages.at(-1) === userHistoryItem) {
+        state.uiMessages.pop();
       }
 
       if (kind === "support") {
@@ -619,6 +697,7 @@
           type: ["site", "game", "presentation"].includes(data.artifact.type) ? data.artifact.type : "site",
           title: String(data.artifact.title || "Новий проєкт"),
           html: String(data.artifact.html),
+          stateToken: typeof data.artifactState === "string" ? data.artifactState : null,
           generationsRemaining: remaining
         };
         state.lastArtifact = artifact;
@@ -628,20 +707,20 @@
       }
 
       if (includeInHistory) {
-        state.messages.push({ role: "assistant", content: answer });
+        state.uiMessages.push({ role: "assistant", content: answer });
       }
 
-      if (countTurn) {
+      if (countTurn && !Number.isInteger(data.turnsUsed)) {
         state.turns += 1;
         updateCounter();
       }
     } catch {
       typing.remove();
-      if (state.messages.at(-1) === userHistoryItem) state.messages.pop();
+      if (state.uiMessages.at(-1) === userHistoryItem) state.uiMessages.pop();
       addMessage("system", "Не вдалося з’єднатися з ШІ. Цей запит не зараховано — спробуй ще раз.", "error");
     } finally {
       state.busy = false;
-      if (state.turns < MAX_TURNS && state.networkAllowed && !(state.isMobile && state.mobileDailyBlocked && !state.mobileSessionActivated)) {
+      if (!state.sessionBroken && state.turns < MAX_TURNS && state.networkAllowed && !(state.isMobile && state.mobileDailyBlocked && !state.mobileSessionActivated)) {
         el.input.disabled = false;
         el.send.disabled = false;
         el.input.focus();

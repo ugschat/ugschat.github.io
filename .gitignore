@@ -1,0 +1,13 @@
+# Cloudflare Worker (налаштування та код шлюзу) — не публікуємо на GitHub Pages
+worker/
+.dev.vars
+.wrangler/
+
+# Залежності та збірка
+node_modules/
+dist/
+
+# Системне
+.DS_Store
+Thumbs.db
+*.log
