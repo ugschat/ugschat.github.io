@@ -18,6 +18,7 @@
     gate: document.querySelector("#networkGate"),
     gateMessage: document.querySelector("#networkMessage"),
     chat: document.querySelector("#chatApp"),
+    viewport: document.querySelector("#conversationViewport"),
     intro: document.querySelector("#introBlock"),
     messages: document.querySelector("#messages"),
     form: document.querySelector("#chatForm"),
@@ -85,6 +86,15 @@
     return "запитів";
   }
 
+  function scrollConversationToBottom(smooth = true) {
+    requestAnimationFrame(() => {
+      el.viewport.scrollTo({
+        top: el.viewport.scrollHeight,
+        behavior: smooth ? "smooth" : "auto"
+      });
+    });
+  }
+
   function addMessage(role, text, extraClass = "") {
     const row = document.createElement("div");
     row.className = `message ${role} ${extraClass}`.trim();
@@ -96,14 +106,8 @@
     row.appendChild(bubble);
     el.messages.appendChild(row);
 
-    if (role !== "system" || state.messages.length > 0) {
-      setConversationMode(true);
-    }
-
-    requestAnimationFrame(() => {
-      row.scrollIntoView({ behavior: "smooth", block: "end" });
-    });
-
+    if (role !== "system" || state.messages.length > 0) setConversationMode(true);
+    scrollConversationToBottom();
     return row;
   }
 
@@ -121,10 +125,10 @@
     el.input.disabled = false;
     el.send.disabled = false;
     el.input.value = "";
-    el.input.placeholder = "Напиши повідомлення…";
+    el.input.placeholder = "Запитай UGS Chat…";
     resetInputHeight();
     updateCounter();
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    el.viewport.scrollTo({ top: 0, behavior: "auto" });
     el.input.focus();
   }
 
@@ -137,12 +141,13 @@
     el.input.disabled = true;
     setConversationMode(true);
 
-    state.messages.push({ role: "user", content: clean });
+    const userHistoryItem = { role: "user", content: clean };
+    state.messages.push(userHistoryItem);
     addMessage("user", clean);
     el.input.value = "";
     resetInputHeight();
 
-    const typing = addMessage("assistant", "Думаю…", "typing");
+    const typing = addMessage("assistant", "", "typing");
 
     try {
       const response = await fetch(`${API_URL}/chat`, {
@@ -160,6 +165,7 @@
 
       if (!response.ok) {
         if (response.status === 403 && data.code === "NETWORK_ONLY") {
+          state.messages.pop();
           showGate(data.message || "UGS Chat працює лише у шкільній мережі UGS.");
           return;
         }
@@ -170,24 +176,34 @@
         }
         if (data.code === "SAFETY_BLOCK") {
           state.turns += 1;
-          const safeText = data.message || "Я не можу допомогти з цим запитом у такому вигляді. Спробуй поставити безпечне навчальне запитання.";
+          const safeText = data.message || "Я не можу допомогти з небезпечною частиною цього запиту. Спробуй сформулювати його як навчальне питання.";
           state.messages.push({ role: "assistant", content: safeText });
           addMessage("assistant", safeText);
           updateCounter();
           return;
         }
-        throw new Error(data.message || "Не вдалося отримати відповідь.");
+
+        // Не зараховуємо технічну помилку в ліміт і не додаємо її в історію моделі.
+        state.messages.pop();
+        addMessage("system", `${data.message || "Сталася технічна помилка."} Цей запит не зараховано.`, "error");
+        return;
       }
 
-      const answer = String(data.answer || "Не вдалося сформувати відповідь.").trim();
+      const answer = String(data.answer || "").trim();
+      if (!answer) {
+        state.messages.pop();
+        addMessage("system", "Не вдалося отримати текст відповіді. Цей запит не зараховано — спробуй ще раз.", "error");
+        return;
+      }
+
       state.turns += 1;
       state.messages.push({ role: "assistant", content: answer });
       addMessage("assistant", answer);
       updateCounter();
-    } catch (error) {
+    } catch {
       typing.remove();
-      state.messages.pop();
-      addMessage("system", error?.message || "Сталася технічна помилка. Спробуй ще раз.");
+      if (state.messages.at(-1) === userHistoryItem) state.messages.pop();
+      addMessage("system", "Не вдалося з’єднатися з ШІ. Цей запит не зараховано — спробуй ще раз.", "error");
     } finally {
       state.busy = false;
       if (state.turns < MAX_TURNS && state.networkAllowed) {
@@ -195,6 +211,7 @@
         el.send.disabled = false;
         el.input.focus();
       }
+      scrollConversationToBottom();
     }
   }
 
@@ -227,13 +244,11 @@
   el.retry.addEventListener("click", checkNetwork);
   el.privacyBtn.addEventListener("click", () => el.privacyDialog.showModal());
   el.closePrivacy.addEventListener("click", () => el.privacyDialog.close());
-
   el.privacyDialog.addEventListener("click", (event) => {
     if (event.target === el.privacyDialog) el.privacyDialog.close();
   });
 
   // Історія навмисно НЕ пишеться у localStorage/sessionStorage/IndexedDB.
-  // Після перезавантаження або закриття вкладки JS-пам'ять зникає.
   updateCounter();
   setConversationMode(false);
   checkNetwork();

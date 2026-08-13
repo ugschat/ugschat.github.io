@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <meta name="theme-color" content="#0F0599" />
+  <meta name="theme-color" content="#ffffff" />
   <meta name="robots" content="noindex,nofollow" />
   <title>UGS Chat — навчальний ШІ-помічник</title>
-  <link rel="stylesheet" href="styles.css?v=3" />
+  <link rel="stylesheet" href="styles.css?v=4" />
 </head>
 <body>
   <main class="app-shell" aria-label="UGS Chat">
@@ -19,86 +19,89 @@
         </div>
       </div>
 
-      <div class="header-actions">
-        <span class="top-status" title="Безпечний навчальний режим">
-          <span class="status-dot" aria-hidden="true"></span>
-          <span>Безпечний режим</span>
+      <div class="topbar-actions">
+        <span class="safe-badge" aria-label="Безпечний навчальний режим">
+          <span class="safe-dot" aria-hidden="true"></span>
+          <span class="safe-label-wide">Безпечний режим</span>
+          <span class="safe-label-short">Безпечно</span>
         </span>
-        <button id="newChatBtn" class="button button-secondary" type="button">Новий чат</button>
+        <button id="newChatBtn" class="new-chat-button" type="button">Новий чат</button>
       </div>
     </header>
 
     <section id="networkGate" class="gate" hidden>
       <div class="gate-card">
-        <div class="gate-icon" aria-hidden="true">🔒</div>
+        <div class="gate-lock" aria-hidden="true">UGS</div>
         <h1>UGS Chat доступний у школі</h1>
-        <p id="networkMessage">Підключись до шкільної мережі UGS і онови сторінку.</p>
-        <button id="retryBtn" class="button button-primary" type="button">Перевірити ще раз</button>
+        <p id="networkMessage">Підключись до шкільної мережі UGS і спробуй ще раз.</p>
+        <button id="retryBtn" class="primary-button" type="button">Перевірити ще раз</button>
       </div>
     </section>
 
     <section id="chatApp" class="chat-app" hidden>
-      <div class="intro" id="introBlock">
-        <span class="status-pill"><span class="status-dot"></span> Безпечний навчальний режим</span>
-        <h1>Привіт! Що будемо робити?</h1>
-        <p>Запитай, попроси пояснити, придумати, створити або допомогти розібратися.</p>
+      <div id="conversationViewport" class="conversation-viewport">
+        <div class="conversation-column">
+          <section class="intro" id="introBlock">
+            <div class="intro-eyebrow">UGS AI CLASSROOM</div>
+            <h1>Чим можу допомогти?</h1>
+            <p>Поясню тему, допоможу з ідеєю, кодом або творчим завданням. Без зайвих налаштувань.</p>
 
-        <div class="starter-grid" aria-label="Приклади запитів">
-          <button class="starter" type="button" data-prompt="Поясни мені простими словами, чому небо блакитне.">
-            <span class="starter-icon" aria-hidden="true">✦</span>
-            <span><strong>Поясни тему</strong><small>Розібрати складне простими словами</small></span>
-          </button>
-          <button class="starter" type="button" data-prompt="Допоможи придумати ідею простої гри, яку можна створити на HTML, CSS і JavaScript.">
-            <span class="starter-icon" aria-hidden="true">⌘</span>
-            <span><strong>Придумай гру</strong><small>Ідея, механіки та перші кроки</small></span>
-          </button>
-          <button class="starter" type="button" data-prompt="Допоможи мені провести мозковий штурм. Постав кілька запитань, щоб я сам придумав кращу ідею.">
-            <span class="starter-icon" aria-hidden="true">◌</span>
-            <span><strong>Мозковий штурм</strong><small>Разом знайти сильнішу ідею</small></span>
-          </button>
-          <button class="starter" type="button" data-prompt="Допоможи розібратися з помилкою в моєму коді. Спочатку пояснюй, а не давай готову відповідь.">
-            <span class="starter-icon" aria-hidden="true">&lt;/&gt;</span>
-            <span><strong>Допоможи з кодом</strong><small>Знайти помилку та зрозуміти її</small></span>
-          </button>
+            <div class="starter-grid" aria-label="Приклади запитів">
+              <button class="starter" type="button" data-prompt="Поясни мені простими словами, чому небо блакитне.">
+                <span class="starter-title">Поясни тему</span>
+                <span class="starter-copy">Розібрати складне простими словами</span>
+              </button>
+              <button class="starter" type="button" data-prompt="Допоможи придумати ідею простої гри, яку можна створити на HTML, CSS і JavaScript.">
+                <span class="starter-title">Придумай гру</span>
+                <span class="starter-copy">Ідея, механіка та перші кроки</span>
+              </button>
+              <button class="starter" type="button" data-prompt="Допоможи мені провести мозковий штурм. Постав кілька запитань, щоб я сам придумав кращу ідею.">
+                <span class="starter-title">Мозковий штурм</span>
+                <span class="starter-copy">Разом знайти сильнішу ідею</span>
+              </button>
+              <button class="starter" type="button" data-prompt="Допоможи розібратися з помилкою в моєму коді. Спочатку пояснюй, а не давай готову відповідь.">
+                <span class="starter-title">Допоможи з кодом</span>
+                <span class="starter-copy">Знайти помилку й зрозуміти її</span>
+              </button>
+            </div>
+          </section>
+
+          <div id="messages" class="messages" role="log" aria-live="polite" aria-label="Повідомлення чату"></div>
         </div>
       </div>
 
-      <div id="messages" class="messages" role="log" aria-live="polite" aria-label="Повідомлення чату"></div>
+      <div class="composer-zone">
+        <div class="composer-column">
+          <form id="chatForm" class="composer">
+            <label class="sr-only" for="promptInput">Повідомлення</label>
+            <textarea id="promptInput" rows="1" maxlength="1600" placeholder="Запитай UGS Chat…" autocomplete="off" spellcheck="true"></textarea>
+            <button id="sendBtn" class="send-button" type="submit" aria-label="Надіслати">
+              <span aria-hidden="true">↑</span>
+            </button>
+          </form>
 
-      <div class="composer-wrap">
-        <div id="privacyNotice" class="privacy-note">
-          <span aria-hidden="true">◉</span>
-          <span>Не вводь прізвище, адресу, телефон, email, пароль або інші особисті дані.</span>
-        </div>
-        <form id="chatForm" class="composer">
-          <label class="sr-only" for="promptInput">Повідомлення</label>
-          <textarea id="promptInput" rows="1" maxlength="1600" placeholder="Напиши повідомлення…" autocomplete="off" spellcheck="true"></textarea>
-          <button id="sendBtn" class="send-button" type="submit" aria-label="Надіслати">↑</button>
-        </form>
-        <div class="composer-meta">
-          <span id="counter">20 запитів залишилося</span>
-          <span>UGS Chat не зберігає історію цього чату</span>
+          <div class="composer-info">
+            <button id="privacyBtn" class="privacy-inline" type="button">Не вводь особисті дані</button>
+            <span class="info-separator" aria-hidden="true">•</span>
+            <span id="counter">20 запитів залишилося</span>
+            <span class="history-note">Історія не зберігається UGS Chat</span>
+          </div>
         </div>
       </div>
     </section>
-
-    <footer class="footer">
-      <span>UGS Chat · Ukrainian Global School</span>
-      <button id="privacyBtn" class="link-button" type="button">Про приватність</button>
-    </footer>
   </main>
 
   <dialog id="privacyDialog">
     <div class="dialog-content">
       <button class="dialog-close" id="closePrivacyBtn" aria-label="Закрити" type="button">×</button>
-      <h2>Як працює приватність</h2>
+      <h2>Приватність у UGS Chat</h2>
       <p><strong>UGS Chat не створює обліковий запис учня і не записує історію розмови у власну базу.</strong> Поточний діалог існує лише у відкритій вкладці браузера.</p>
       <p>Після закриття або перезавантаження сторінки локальна історія цього чату зникає.</p>
-      <p>Щоб отримати відповідь, текст запиту передається через захищений шкільний шлюз до OpenAI API. Для API діють окремі правила обробки та технічного зберігання даних постачальником.</p>
-      <p>Тому не вводь персональні, медичні, фінансові або інші конфіденційні дані.</p>
+      <p>Щоб отримати відповідь, текст запиту передається через захищений шкільний шлюз до OpenAI API. Для API діють окремі правила технічної обробки даних постачальником.</p>
+      <p>Не вводь прізвище, домашню адресу, телефон, email, пароль, медичні, фінансові або інші конфіденційні дані.</p>
     </div>
   </dialog>
 
-  <script src="app.js?v=3"></script>
+  <script src="app.js?v=4"></script>
 </body>
 </html>
