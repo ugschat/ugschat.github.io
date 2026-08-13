@@ -182,6 +182,55 @@
     return row;
   }
 
+  function looksLikeArtifactRequest(text) {
+    return /(створ|зроб|згенер|побуд|розроб).{0,32}(гру|гра|сайт|веб[- ]?сторін|презентац|слайд)|(?:гра|сайт|презентац).{0,24}(html|javascript|css)/iu.test(text);
+  }
+
+  function addThinkingMessage(requestText) {
+    const row = document.createElement("div");
+    row.className = "message assistant thinking";
+    row.setAttribute("role", "status");
+    row.setAttribute("aria-live", "polite");
+
+    const bubble = document.createElement("div");
+    bubble.className = "bubble thinking-bubble";
+
+    const dots = document.createElement("span");
+    dots.className = "thinking-dots";
+    dots.setAttribute("aria-hidden", "true");
+    for (let i = 0; i < 3; i += 1) {
+      dots.appendChild(document.createElement("span"));
+    }
+
+    const label = document.createElement("span");
+    label.className = "thinking-label";
+    const isArtifact = looksLikeArtifactRequest(requestText);
+    label.textContent = isArtifact
+      ? "Зачекай, створюю проєкт… Це може зайняти кілька секунд"
+      : "Зачекай, готую відповідь…";
+
+    bubble.append(dots, label);
+    row.appendChild(bubble);
+    el.messages.appendChild(row);
+    setConversationMode(true);
+    scrollConversationToBottom();
+
+    const slowTimer = window.setTimeout(() => {
+      if (!row.isConnected) return;
+      label.textContent = isArtifact
+        ? "Ще трохи — збираю проєкт і перевіряю результат…"
+        : "Ще трохи — майже готово…";
+      scrollConversationToBottom();
+    }, 7000);
+
+    return {
+      remove() {
+        window.clearTimeout(slowTimer);
+        row.remove();
+      }
+    };
+  }
+
   function addArtifactMessage(text, artifact) {
     const row = document.createElement("div");
     row.className = "message assistant artifact-message";
@@ -438,7 +487,7 @@
     el.input.value = "";
     resetInputHeight();
 
-    const typing = addMessage("assistant", "", "typing");
+    const typing = addThinkingMessage(clean);
 
     try {
       const response = await fetch(`${API_URL}/chat`, {
