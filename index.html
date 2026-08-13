@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#ffffff" />
   <meta name="robots" content="noindex,nofollow" />
   <title>UGS Chat — навчальний ШІ-помічник</title>
-  <link rel="stylesheet" href="styles.css?v=4" />
+  <link rel="stylesheet" href="styles.css?v=7" />
 </head>
 <body>
   <main class="app-shell" aria-label="UGS Chat">
@@ -84,6 +84,7 @@
             <button id="privacyBtn" class="privacy-inline" type="button">Не вводь особисті дані</button>
             <span class="info-separator" aria-hidden="true">•</span>
             <span id="counter">20 запитів залишилося</span>
+            <span id="mobileLimitInfo" class="mobile-limit-info" hidden>до 5 чатів на день</span>
             <span class="history-note">Історія не зберігається UGS Chat</span>
           </div>
         </div>
@@ -97,11 +98,12 @@
       <h2>Приватність у UGS Chat</h2>
       <p><strong>UGS Chat не створює обліковий запис учня і не записує історію розмови у власну базу.</strong> Поточний діалог існує лише у відкритій вкладці браузера.</p>
       <p>Після закриття або перезавантаження сторінки локальна історія цього чату зникає.</p>
+      <p><strong>На мобільних пристроях</strong> браузер зберігає лише випадковий технічний ідентифікатор, щоб обмежити кількість нових чатів до 5 на день. Він не містить імені, повідомлень або історії. На шкільних ноутбуках і ПК добового ліміту сесій немає.</p>
       <p>Щоб отримати відповідь, текст запиту передається через захищений шкільний шлюз до OpenAI API. Для API діють окремі правила технічної обробки даних постачальником.</p>
       <p>Не вводь прізвище, домашню адресу, телефон, email, пароль, медичні, фінансові або інші конфіденційні дані.</p>
     </div>
   </dialog>
 
-  <script src="app.js?v=4"></script>
+  <script src="app.js?v=7"></script>
 </body>
 </html>
