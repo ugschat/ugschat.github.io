@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <link rel="manifest" href="/site.webmanifest" />
 
-  <link rel="stylesheet" href="styles.css?v=20" />
+  <link rel="stylesheet" href="styles.css?v=21" />
 </head>
 <body>
   <main class="app-shell" aria-label="UGS Chat">
@@ -68,11 +68,6 @@
         </nav>
 
         <div class="sidebar-footer">
-          <div class="sidebar-export-actions" aria-label="Дії з поточною розмовою">
-            <button id="copyConversationBtn" class="sidebar-action" type="button" disabled>Копіювати</button>
-            <button id="savePdfBtn" class="sidebar-action" type="button" title="Відкриє вікно друку. Збережений PDF залишиться на цьому пристрої." disabled>Зберегти PDF</button>
-          </div>
-          <div class="sidebar-export-note">Збережений PDF залишиться на пристрої</div>
           <button id="aiUseBtn" class="sidebar-action sidebar-action-wide" type="button">Як зазначити використання ШІ</button>
           <button id="helpBtn" class="sidebar-action sidebar-action-wide" type="button">Допомога</button>
           <button id="sidebarPrivacyBtn" class="sidebar-action sidebar-action-wide" type="button">Приватність і безпека</button>
@@ -94,6 +89,18 @@
         </section>
 
         <section id="chatApp" class="chat-app" hidden>
+          <div id="conversationBar" class="conversation-bar" aria-label="Дії з цим чатом" hidden>
+            <div class="conversation-bar-title">
+              <span class="conversation-bar-label">Цей чат</span>
+              <span id="conversationBarName" class="conversation-bar-name"></span>
+            </div>
+            <div class="conversation-bar-actions">
+              <button id="copyConversationBtn" class="conversation-action" type="button">Копіювати чат</button>
+              <button id="savePdfBtn" class="conversation-action" type="button" aria-describedby="savePdfHint">Зберегти у PDF</button>
+            </div>
+            <p id="savePdfHint" class="conversation-bar-hint">Відкриється вікно друку — обери «Зберегти як PDF». Файл залишиться на цьому пристрої.</p>
+          </div>
+
           <div id="conversationViewport" class="conversation-viewport">
             <div class="conversation-column">
               <section class="intro" id="introBlock">
@@ -190,6 +197,6 @@
 
   <section id="printConversation" class="print-conversation" aria-hidden="true"></section>
 
-  <script src="app.js?v=20"></script>
+  <script src="app.js?v=21"></script>
 </body>
 </html>

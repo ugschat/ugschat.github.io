@@ -9,7 +9,7 @@
   const MOBILE_DAILY_CHAT_LIMIT = 5;
   const MAX_ARTIFACT_GENERATIONS = 3;
   const MOBILE_DEVICE_KEY = "ugs_chat_mobile_device_v1";
-  const ARTIFACT_SANDBOX_URL = "sandbox.html?v=20";
+  const ARTIFACT_SANDBOX_URL = "sandbox.html?v=21";
   const TECHNICAL_CONTACT = "Якщо проблема повторюється, звернися до пана Артема, вчителя інформатики.";
 
   const state = {
@@ -38,6 +38,8 @@
     sidebarPrivacy: document.querySelector("#sidebarPrivacyBtn"),
     copyConversation: document.querySelector("#copyConversationBtn"),
     savePdf: document.querySelector("#savePdfBtn"),
+    conversationBar: document.querySelector("#conversationBar"),
+    conversationBarName: document.querySelector("#conversationBarName"),
     aiUse: document.querySelector("#aiUseBtn"),
     help: document.querySelector("#helpBtn"),
     chatList: document.querySelector("#chatList"),
@@ -380,7 +382,7 @@
       const copy = document.createElement("button");
       copy.type = "button";
       copy.className = "message-copy";
-      copy.textContent = "Копіювати";
+      copy.textContent = "Копіювати відповідь";
       copy.addEventListener("click", () => copyText(copy, text));
       row.appendChild(copy);
     }
@@ -545,10 +547,13 @@
     return lines.join("\n").trim();
   }
 
+  // Панель дій ховаємо, поки чат порожній: мертві кнопки збивають учня з пантелику
+  // сильніше, ніж їхня відсутність.
   function updateConversationActions() {
-    const hasEntries = conversationEntries(getActiveChat()).length > 0;
-    el.copyConversation.disabled = !hasEntries;
-    el.savePdf.disabled = !hasEntries;
+    const chat = getActiveChat();
+    const hasEntries = conversationEntries(chat).length > 0;
+    el.conversationBar.hidden = !hasEntries;
+    if (hasEntries) el.conversationBarName.textContent = chat.title;
   }
 
   function appendPrintText(parent, className, text) {
@@ -668,17 +673,26 @@
     title.textContent = artifact.title || artifactTypeLabel(artifact.type);
     meta.append(badge, title);
 
+    // Перемикачі режиму і дії з файлом — різні за суттю, тому й групи різні:
+    // раніше всі п'ять кнопок виглядали однаково.
+    const tabs = document.createElement("div");
+    tabs.className = "artifact-tabs";
+    tabs.setAttribute("aria-label", "Режим перегляду проєкту");
+    const previewBtn = artifactAction("Перегляд", "artifact-tab active");
+    previewBtn.setAttribute("aria-pressed", "true");
+    const codeBtn = artifactAction("Код", "artifact-tab");
+    codeBtn.setAttribute("aria-pressed", "false");
+    tabs.append(previewBtn, codeBtn);
+
     const actions = document.createElement("div");
     actions.className = "artifact-actions";
-    const previewBtn = artifactAction("Перегляд", "artifact-tab active");
-    const codeBtn = artifactAction("Код", "artifact-tab");
     const fullscreenBtn = artifactAction("Розгорнути", "artifact-fullscreen-btn");
     fullscreenBtn.setAttribute("aria-label", "Розгорнути проєкт на весь екран");
     const downloadBtn = artifactAction("Завантажити", "artifact-download");
     downloadBtn.setAttribute("aria-label", "Завантажити захищену копію проєкту");
-    const copyBtn = artifactAction("Копіювати файл", "artifact-copy");
-    actions.append(previewBtn, codeBtn, fullscreenBtn, downloadBtn, copyBtn);
-    header.append(meta, actions);
+    const copyBtn = artifactAction("Копіювати код", "artifact-copy");
+    actions.append(fullscreenBtn, downloadBtn, copyBtn);
+    header.append(meta, tabs, actions);
 
     const body = document.createElement("div");
     body.className = "artifact-body";
@@ -714,6 +728,8 @@
       codePanel.hidden = showPreview;
       previewBtn.classList.toggle("active", showPreview);
       codeBtn.classList.toggle("active", !showPreview);
+      previewBtn.setAttribute("aria-pressed", String(showPreview));
+      codeBtn.setAttribute("aria-pressed", String(!showPreview));
       if (!showPreview) scrollConversationToBottom(false);
     };
 
