@@ -1,10 +1,12 @@
 <!doctype html>
-<html lang="uk">
+<html lang="uk" class="frame-check">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="theme-color" content="#ffffff" />
   <meta name="robots" content="noindex,nofollow" />
+  <meta name="referrer" content="no-referrer" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src https://ugs-chat-api.kysliakov.workers.dev; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests" />
   <title>UGS Chat — навчальний ШІ-помічник</title>
 
   <link rel="icon" href="/favicon.ico" sizes="32x32" />
@@ -12,11 +14,15 @@
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <link rel="manifest" href="/site.webmanifest" />
 
-  <link rel="stylesheet" href="styles.css?v=15" />
+  <link rel="stylesheet" href="styles.css?v=20" />
 </head>
 <body>
   <main class="app-shell" aria-label="UGS Chat">
     <header class="topbar">
+      <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="Відкрити список чатів" aria-controls="chatSidebar" aria-expanded="false">
+        <span aria-hidden="true">☰</span>
+      </button>
+
       <div class="brand" aria-label="UGS Chat">
         <div class="brand-mark" aria-hidden="true">
           <img class="brand-logo" src="icons/logo-white-128.png" alt="" width="128" height="128" decoding="async" />
@@ -28,92 +34,162 @@
       </div>
 
       <div class="topbar-actions">
-        <span class="safe-badge" aria-label="Безпечний навчальний режим">
+        <span class="safe-badge" aria-label="Увімкнено шкільні фільтри">
           <span class="safe-dot" aria-hidden="true"></span>
-          <span class="safe-label-wide">Безпечний режим</span>
-          <span class="safe-label-short">Безпечно</span>
+          <span class="safe-label-wide">Шкільні фільтри</span>
+          <span class="safe-label-short">Фільтри</span>
         </span>
         <button id="newChatBtn" class="new-chat-button" type="button">Новий чат</button>
       </div>
     </header>
 
-    <section id="networkGate" class="gate" hidden>
-      <div class="gate-card">
-        <div class="gate-lock" aria-hidden="true">
-          <img class="brand-logo" src="icons/logo-white-128.png" alt="" width="128" height="128" decoding="async" />
-        </div>
-        <h1>UGS Chat доступний у школі</h1>
-        <p id="networkMessage">Підключись до шкільної мережі UGS і спробуй ще раз.</p>
-        <button id="retryBtn" class="primary-button" type="button">Перевірити ще раз</button>
-      </div>
-    </section>
-
-    <section id="chatApp" class="chat-app" hidden>
-      <div id="conversationViewport" class="conversation-viewport">
-        <div class="conversation-column">
-          <section class="intro" id="introBlock">
-            <div class="intro-eyebrow">UGS AI CLASSROOM</div>
-            <h1>Чим можу допомогти?</h1>
-            <p>Відповім на запитання, допоможу з кодом або одразу створю просту гру, сайт чи презентацію. Без зайвих налаштувань.</p>
-
-            <div class="starter-grid" aria-label="Приклади запитів">
-              <button class="starter" type="button" data-prompt="Поясни мені простими словами, чому небо блакитне.">
-                <span class="starter-title">Поясни тему</span>
-                <span class="starter-copy">Розібрати складне простими словами</span>
-              </button>
-              <button class="starter" type="button" data-prompt="Створи просту браузерну гру на HTML, CSS і JavaScript. Нехай вона буде зрозумілою, веселою і працює мишкою та на сенсорному екрані.">
-                <span class="starter-title">Створи гру</span>
-                <span class="starter-copy">Готова гра з переглядом у чаті</span>
-              </button>
-              <button class="starter" type="button" data-prompt="Створи простий односторінковий сайт про цікаву навчальну тему. Зроби його сучасним, зрозумілим і адаптивним.">
-                <span class="starter-title">Створи сайт</span>
-                <span class="starter-copy">HTML-сайт, який можна одразу відкрити</span>
-              </button>
-              <button class="starter" type="button" data-prompt="Створи інтерактивну HTML-презентацію на 6 слайдів про цікаву навчальну тему. Додай кнопки вперед і назад.">
-                <span class="starter-title">Зроби презентацію</span>
-                <span class="starter-copy">Слайди прямо всередині UGS Chat</span>
-              </button>
-            </div>
-          </section>
-
-          <div id="messages" class="messages" role="log" aria-live="polite" aria-label="Повідомлення чату"></div>
-        </div>
-      </div>
-
-      <div class="composer-zone">
-        <div class="composer-column">
-          <form id="chatForm" class="composer">
-            <label class="sr-only" for="promptInput">Повідомлення</label>
-            <textarea id="promptInput" rows="1" maxlength="1600" placeholder="Запитай UGS Chat…" autocomplete="off" spellcheck="true"></textarea>
-            <button id="sendBtn" class="send-button" type="submit" aria-label="Надіслати">
-              <span aria-hidden="true">↑</span>
-            </button>
-          </form>
-
-          <div class="composer-info">
-            <button id="privacyBtn" class="privacy-inline" type="button">Не вводь особисті дані</button>
-            <span class="info-separator" aria-hidden="true">•</span>
-            <span id="counter">20 запитів залишилося</span>
-            <span id="mobileLimitInfo" class="mobile-limit-info" hidden>до 5 чатів на день</span>
-            <span class="history-note">Історія не зберігається UGS Chat</span>
+    <div class="workspace">
+      <aside id="chatSidebar" class="chat-sidebar" aria-label="Тимчасові чати">
+        <div class="sidebar-header">
+          <div>
+            <div class="sidebar-title">Чати</div>
+            <div class="sidebar-subtitle">Поточна вкладка</div>
           </div>
+          <button id="sidebarClose" class="sidebar-close" type="button" aria-label="Закрити список чатів">×</button>
         </div>
+        <button id="sidebarNewChat" class="sidebar-new-chat" type="button">
+          <span aria-hidden="true">＋</span>
+          <span>Новий чат</span>
+        </button>
+
+        <div class="temporary-note" role="note">
+          <span class="temporary-note-icon" aria-hidden="true">◷</span>
+          <span><strong>Чати тимчасові.</strong> Вони доступні лише в цій вкладці та зникнуть після перезавантаження або закриття сайту.</span>
+        </div>
+
+        <nav class="chat-nav" aria-label="Список чатів">
+          <div class="chat-list-label">У цій вкладці</div>
+          <div id="chatList" class="chat-list" role="list"></div>
+        </nav>
+
+        <div class="sidebar-footer">
+          <div class="sidebar-export-actions" aria-label="Дії з поточною розмовою">
+            <button id="copyConversationBtn" class="sidebar-action" type="button" disabled>Копіювати</button>
+            <button id="savePdfBtn" class="sidebar-action" type="button" title="Відкриє вікно друку. Збережений PDF залишиться на цьому пристрої." disabled>Зберегти PDF</button>
+          </div>
+          <div class="sidebar-export-note">Збережений PDF залишиться на пристрої</div>
+          <button id="aiUseBtn" class="sidebar-action sidebar-action-wide" type="button">Як зазначити використання ШІ</button>
+          <button id="helpBtn" class="sidebar-action sidebar-action-wide" type="button">Допомога</button>
+          <button id="sidebarPrivacyBtn" class="sidebar-action sidebar-action-wide" type="button">Приватність і безпека</button>
+        </div>
+      </aside>
+
+      <button id="sidebarBackdrop" class="sidebar-backdrop" type="button" aria-label="Закрити список чатів" hidden></button>
+
+      <div class="main-panel">
+        <section id="networkGate" class="gate" hidden>
+          <div class="gate-card">
+            <div class="gate-lock" aria-hidden="true">
+              <img class="brand-logo" src="icons/logo-white-128.png" alt="" width="128" height="128" decoding="async" />
+            </div>
+            <h1>UGS Chat доступний у школі</h1>
+            <p id="networkMessage">Підключись до шкільної мережі UGS і спробуй ще раз.</p>
+            <button id="retryBtn" class="primary-button" type="button">Перевірити ще раз</button>
+          </div>
+        </section>
+
+        <section id="chatApp" class="chat-app" hidden>
+          <div id="conversationViewport" class="conversation-viewport">
+            <div class="conversation-column">
+              <section class="intro" id="introBlock">
+                <div class="intro-eyebrow">UGS AI CLASSROOM</div>
+                <h1>Чим можу допомогти?</h1>
+                <p>Відповім на запитання, допоможу з кодом або одразу створю просту гру, сайт чи презентацію. Без зайвих налаштувань.</p>
+
+                <div class="starter-grid" aria-label="Приклади запитів">
+                  <button class="starter" type="button" data-prompt="Поясни мені простими словами, чому небо блакитне.">
+                    <span class="starter-title">Поясни тему</span>
+                    <span class="starter-copy">Розібрати складне простими словами</span>
+                  </button>
+                  <button class="starter" type="button" data-prompt="Створи просту браузерну гру на HTML, CSS і JavaScript. Нехай вона буде зрозумілою, веселою і працює мишкою та на сенсорному екрані.">
+                    <span class="starter-title">Створи гру</span>
+                    <span class="starter-copy">Готова гра з переглядом у чаті</span>
+                  </button>
+                  <button class="starter" type="button" data-prompt="Створи простий односторінковий сайт про цікаву навчальну тему. Зроби його сучасним, зрозумілим і адаптивним.">
+                    <span class="starter-title">Створи сайт</span>
+                    <span class="starter-copy">HTML-сайт, який можна одразу відкрити</span>
+                  </button>
+                  <button class="starter" type="button" data-prompt="Створи інтерактивну HTML-презентацію на 6 слайдів про цікаву навчальну тему. Додай кнопки вперед і назад.">
+                    <span class="starter-title">Зроби презентацію</span>
+                    <span class="starter-copy">Слайди прямо всередині UGS Chat</span>
+                  </button>
+                </div>
+              </section>
+
+              <div id="messages" class="messages" role="log" aria-live="polite" aria-label="Повідомлення чату"></div>
+            </div>
+          </div>
+
+          <div class="composer-zone">
+            <div class="composer-column">
+              <form id="chatForm" class="composer">
+                <label class="sr-only" for="promptInput">Повідомлення</label>
+                <textarea id="promptInput" rows="1" maxlength="1600" placeholder="Запитай UGS Chat…" autocomplete="off" spellcheck="true"></textarea>
+                <button id="sendBtn" class="send-button" type="submit" aria-label="Надіслати">
+                  <span aria-hidden="true">↑</span>
+                </button>
+              </form>
+
+              <div class="composer-info">
+                <button id="privacyBtn" class="privacy-inline" type="button">Не вводь особисті дані</button>
+                <span class="info-separator" aria-hidden="true">•</span>
+                <span id="counter">20 запитів залишилося</span>
+                <span id="mobileLimitInfo" class="mobile-limit-info" hidden>до 5 чатів на день</span>
+                <span class="history-note">ШІ може помилятися — важливе перевіряй з учителем</span>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
-    </section>
+    </div>
   </main>
 
   <dialog id="privacyDialog">
     <div class="dialog-content">
       <button class="dialog-close" id="closePrivacyBtn" aria-label="Закрити" type="button">×</button>
       <h2>Приватність у UGS Chat</h2>
-      <p><strong>UGS Chat не створює обліковий запис учня і не записує історію розмови у власну базу.</strong> Поточний діалог існує лише у відкритій вкладці браузера.</p>
-      <p>Після закриття або перезавантаження сторінки локальна історія цього чату зникає. Для захисту від підробки запитів UGS Chat передає між браузером і Worker підписаний технічний стан поточного діалогу; він живе лише у відкритій вкладці, має обмежений строк дії та не записується як історія на сервері.</p>
+      <p><strong>UGS Chat не створює обліковий запис учня і не записує чати у власну базу.</strong> Усі відкриті чати зберігаються тільки в пам’яті поточної вкладки.</p>
+      <p>Після закриття або перезавантаження сторінки всі чати зникають. Для захисту даних UGS Chat передає між браузером і Worker зашифрований та автентифікований технічний стан активного діалогу. Це не замінює правило «не вводь особисті дані».</p>
       <p><strong>На мобільних пристроях</strong> браузер зберігає лише випадковий технічний ідентифікатор, щоб обмежити кількість нових чатів до 5 на день. На сервері зберігаються лише короткоживучі анонімні технічні лічильники запитів і лімітів — без тексту повідомлень, імен або історії. На шкільних ноутбуках і ПК добового ліміту сесій немає.</p>
-      <p>Щоб отримати відповідь, текст запиту передається через захищений шкільний шлюз до OpenAI API. Для API діють окремі правила технічної обробки даних постачальником.</p>
+      <p>Щоб отримати відповідь, текст запиту передається через захищений шкільний шлюз до OpenAI API. Запити не використовуються для тренування моделей без окремої згоди. За стандартних налаштувань журнали запобігання зловживанням можуть містити запити й відповіді та зберігатися до 30 днів; для роботи з дітьми до 13 років школа має використовувати схвалений режим Zero Data Retention.</p>
       <p>Не вводь прізвище, домашню адресу, телефон, email, пароль, медичні, фінансові або інші конфіденційні дані.</p>
     </div>
   </dialog>
 
-  <script src="app.js?v=15"></script>
+  <dialog id="helpDialog">
+    <div class="dialog-content">
+      <button class="dialog-close" id="closeHelpBtn" aria-label="Закрити" type="button">×</button>
+      <h2>Допомога</h2>
+      <div class="contact-card">
+        <h3>Технічні проблеми</h3>
+        <p>Якщо чат не відкривається, не надсилає повідомлення або показує технічну помилку — звернися до <strong>пана Артема, вчителя інформатики</strong>.</p>
+      </div>
+      <div class="contact-card contact-card-support">
+        <h3>Психологічна підтримка</h3>
+        <p>Якщо розмова стосується сильного страху, насильства, самопошкодження або тобі просто важко — звернися до <strong>шкільного психолога</strong> чи іншого дорослого, якому довіряєш.</p>
+        <p>Якщо небезпека є прямо зараз, не залишайся наодинці: поклич дорослого поруч і покажи йому екран.</p>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="aiUseDialog">
+    <div class="dialog-content">
+      <button class="dialog-close" id="closeAiUseBtn" aria-label="Закрити" type="button">×</button>
+      <h2>Як зазначити використання ШІ</h2>
+      <p>Якщо UGS Chat істотно допоміг із роботою, коротко назви інструмент і поясни, для чого ти його використав.</p>
+      <div class="ai-use-example" id="aiUseTemplate">Використано UGS Chat для пошуку ідей, пояснення матеріалу та підготовки чернетки. Результат перевірено й доопрацьовано мною.</div>
+      <button id="copyAiUseBtn" class="dialog-primary-action" type="button">Копіювати приклад</button>
+      <p class="dialog-note">Якщо вчитель дав окремі правила для завдання, дотримуйся саме їх.</p>
+    </div>
+  </dialog>
+
+  <section id="printConversation" class="print-conversation" aria-hidden="true"></section>
+
+  <script src="app.js?v=20"></script>
 </body>
 </html>

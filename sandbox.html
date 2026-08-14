@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8" />
+  <!-- Власний CSP цього документа. Він НЕ успадковується від index.html, бо кадр
+       завантажується справжнім http-URL, а не через srcdoc. Саме тут інлайновий
+       код проєкту отримує дозвіл працювати, залишаючись без доступу до мережі. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data: blob:; media-src 'none'; connect-src 'none'; font-src 'none'; frame-src 'none'; child-src 'none'; worker-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="referrer" content="no-referrer" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>UGS Chat — ізольований перегляд проєкту</title>
+  <style>html,body{margin:0;height:100%;background:#fff}</style>
+</head>
+<body>
+  <script>
+    (() => {
+      "use strict";
+
+      let rendered = false;
+
+      function render(html) {
+        if (rendered) return;
+        rendered = true;
+        // Підтверджуємо доставку до перезапису документа: після document.write
+        // цей контекст зникає разом зі скриптом.
+        try {
+          window.parent.postMessage({ ugsSandbox: "rendered" }, "*");
+        } catch {
+          // Немає з ким підтверджувати — просто малюємо проєкт.
+        }
+        document.open();
+        document.write(String(html));
+        document.close();
+      }
+
+      window.addEventListener("message", (event) => {
+        if (event.source !== window.parent) return;
+        const data = event.data;
+        if (!data || data.ugsSandbox !== "render" || typeof data.html !== "string") return;
+        render(data.html);
+      });
+
+      try {
+        window.parent.postMessage({ ugsSandbox: "ready" }, "*");
+      } catch {
+        // Кадр відкрито без батьківської сторінки — показувати нічого.
+      }
+    })();
+  </script>
+</body>
+</html>
