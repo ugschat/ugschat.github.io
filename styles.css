@@ -143,28 +143,26 @@ button:focus-visible, textarea:focus-visible {
   align-items: center;
   gap: 9px;
 }
-.safe-badge {
-  display: inline-flex;
+/* Дії з поточним чатом живуть у топбарі поруч із «Новий чат»: там уже стоїть
+   керування чатом, і область розмови лишається чистою. */
+.conversation-actions {
+  display: flex;
   align-items: center;
-  gap: 7px;
-  min-height: 34px;
-  padding: 0 11px;
-  border: 1px solid var(--success-line);
-  border-radius: 999px;
-  color: var(--success);
-  background: var(--success-soft);
+  gap: 2px;
+}
+.conversation-actions[hidden] { display: none; }
+.conversation-action {
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: var(--muted);
+  background: transparent;
   font-size: 12.5px;
-  font-weight: 750;
+  font-weight: 700;
   white-space: nowrap;
 }
-.safe-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #18a362;
-  box-shadow: 0 0 0 3px rgba(24,163,98,.09);
-}
-.safe-label-short { display: none; }
+.conversation-action:hover { color: var(--brand); background: var(--brand-soft); }
 .new-chat-button {
   min-height: 38px;
   padding: 0 13px;
@@ -371,71 +369,6 @@ button:focus-visible, textarea:focus-visible {
   flex-direction: column;
   overflow: hidden;
   background: #fff;
-}
-/* Дії з усім чатом стоять над самою розмовою, а не в навігації:
-   так видно, до чого саме вони застосовуються. */
-.conversation-bar {
-  flex: 0 0 auto;
-  padding: 9px 0 10px;
-  border-bottom: 1px solid var(--line);
-  background: #fbfbfc;
-}
-.conversation-bar[hidden] { display: none; }
-.conversation-bar-title,
-.conversation-bar-actions,
-.conversation-bar-hint {
-  width: min(var(--content), calc(100% - 32px));
-  margin: 0 auto;
-}
-.conversation-bar-title {
-  display: flex;
-  align-items: baseline;
-  gap: 7px;
-  min-width: 0;
-}
-.conversation-bar-label {
-  flex: 0 0 auto;
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: .02em;
-  text-transform: uppercase;
-}
-.conversation-bar-name {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 13px;
-  font-weight: 750;
-}
-.conversation-bar-actions {
-  margin-top: 7px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.conversation-action {
-  min-height: 34px;
-  padding: 0 12px;
-  border: 1px solid var(--line-strong);
-  border-radius: 10px;
-  color: var(--text);
-  background: #fff;
-  font-size: 12.5px;
-  font-weight: 700;
-}
-.conversation-action:hover { border-color: #c9c5ef; background: var(--brand-soft); color: var(--brand); }
-.conversation-bar-hint {
-  margin-top: 6px;
-  color: var(--muted);
-  font-size: 11px;
-  line-height: 1.35;
-}
-@media (max-width: 700px) {
-  .conversation-bar { padding: 7px 0 8px; }
-  .conversation-bar-actions { margin-top: 6px; }
-  .conversation-bar-hint { margin-top: 5px; font-size: 10.5px; }
 }
 .conversation-viewport {
   flex: 1 1 auto;
@@ -1007,9 +940,7 @@ body.has-conversation .conversation-column { padding-bottom: 22px; }
   .brand-logo { width: 22px; height: 22px; }
   .brand-name { font-size: 16px; }
   .brand-subtitle { display: none; }
-  .safe-label-wide { display: none; }
-  .safe-label-short { display: inline; }
-  .safe-badge { min-height: 36px; padding: 0 9px; }
+  .conversation-action { min-height: 40px; padding: 0 8px; font-size: 12px; }
   .new-chat-button { min-height: 44px; padding: 0 11px; font-size: 13px; }
   .conversation-column { width: min(100% - 22px, var(--content)); padding-top: 18px; }
   .intro { margin: 42px auto 24px; }
@@ -1026,12 +957,15 @@ body.has-conversation .conversation-column { padding-bottom: 22px; }
   .privacy-inline { min-height: 36px; }
 }
 
+/* Нижче цієї ширини назва бренду встигала лише стиснутись до нечитабельного
+   огризка, тож поступається місцем діям із чатом. Логотип лишається. */
+@media (max-width: 560px) {
+  .brand-copy { display: none; }
+}
+
 @media (max-width: 430px) {
   .topbar { gap: 7px; }
   .brand { gap: 7px; }
-  .safe-badge { width: 36px; min-width: 36px; padding: 0; justify-content: center; }
-  .safe-label-wide,
-  .safe-label-short { display: none; }
   .new-chat-button {
     width: 44px;
     min-width: 44px;

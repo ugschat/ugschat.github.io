@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <link rel="manifest" href="/site.webmanifest" />
 
-  <link rel="stylesheet" href="styles.css?v=21" />
+  <link rel="stylesheet" href="styles.css?v=22" />
 </head>
 <body>
   <main class="app-shell" aria-label="UGS Chat">
@@ -34,11 +34,10 @@
       </div>
 
       <div class="topbar-actions">
-        <span class="safe-badge" aria-label="Увімкнено шкільні фільтри">
-          <span class="safe-dot" aria-hidden="true"></span>
-          <span class="safe-label-wide">Шкільні фільтри</span>
-          <span class="safe-label-short">Фільтри</span>
-        </span>
+        <div id="conversationBar" class="conversation-actions" aria-label="Дії з цим чатом" hidden>
+          <button id="copyConversationBtn" class="conversation-action" type="button">Копіювати чат</button>
+          <button id="savePdfBtn" class="conversation-action" type="button">Зберегти у PDF</button>
+        </div>
         <button id="newChatBtn" class="new-chat-button" type="button">Новий чат</button>
       </div>
     </header>
@@ -89,18 +88,6 @@
         </section>
 
         <section id="chatApp" class="chat-app" hidden>
-          <div id="conversationBar" class="conversation-bar" aria-label="Дії з цим чатом" hidden>
-            <div class="conversation-bar-title">
-              <span class="conversation-bar-label">Цей чат</span>
-              <span id="conversationBarName" class="conversation-bar-name"></span>
-            </div>
-            <div class="conversation-bar-actions">
-              <button id="copyConversationBtn" class="conversation-action" type="button">Копіювати чат</button>
-              <button id="savePdfBtn" class="conversation-action" type="button" aria-describedby="savePdfHint">Зберегти у PDF</button>
-            </div>
-            <p id="savePdfHint" class="conversation-bar-hint">Відкриється вікно друку — обери «Зберегти як PDF». Файл залишиться на цьому пристрої.</p>
-          </div>
-
           <div id="conversationViewport" class="conversation-viewport">
             <div class="conversation-column">
               <section class="intro" id="introBlock">
@@ -197,6 +184,6 @@
 
   <section id="printConversation" class="print-conversation" aria-hidden="true"></section>
 
-  <script src="app.js?v=21"></script>
+  <script src="app.js?v=22"></script>
 </body>
 </html>

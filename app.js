@@ -9,7 +9,7 @@
   const MOBILE_DAILY_CHAT_LIMIT = 5;
   const MAX_ARTIFACT_GENERATIONS = 3;
   const MOBILE_DEVICE_KEY = "ugs_chat_mobile_device_v1";
-  const ARTIFACT_SANDBOX_URL = "sandbox.html?v=21";
+  const ARTIFACT_SANDBOX_URL = "sandbox.html?v=22";
   const TECHNICAL_CONTACT = "Якщо проблема повторюється, звернися до пана Артема, вчителя інформатики.";
 
   const state = {
@@ -39,7 +39,6 @@
     copyConversation: document.querySelector("#copyConversationBtn"),
     savePdf: document.querySelector("#savePdfBtn"),
     conversationBar: document.querySelector("#conversationBar"),
-    conversationBarName: document.querySelector("#conversationBarName"),
     aiUse: document.querySelector("#aiUseBtn"),
     help: document.querySelector("#helpBtn"),
     chatList: document.querySelector("#chatList"),
@@ -550,10 +549,7 @@
   // Панель дій ховаємо, поки чат порожній: мертві кнопки збивають учня з пантелику
   // сильніше, ніж їхня відсутність.
   function updateConversationActions() {
-    const chat = getActiveChat();
-    const hasEntries = conversationEntries(chat).length > 0;
-    el.conversationBar.hidden = !hasEntries;
-    if (hasEntries) el.conversationBarName.textContent = chat.title;
+    el.conversationBar.hidden = conversationEntries(getActiveChat()).length === 0;
   }
 
   function appendPrintText(parent, className, text) {
