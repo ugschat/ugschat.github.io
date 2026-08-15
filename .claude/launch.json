@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "ugs-ui-harness",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["scripts/ui-harness.mjs"],
+      "port": 4173
+    }
+  ]
+}

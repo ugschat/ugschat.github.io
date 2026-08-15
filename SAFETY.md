@@ -45,7 +45,7 @@ UGS Chat застосовує підхід зменшення шкоди: учн
 - `npm run check` у `worker/`
 - `/health` повертає `healthy: true`, актуальний `policyVersion` і очікуваний configuration fingerprint без provider/model/category inventory
 - production generation deployment має `qualificationStatus: production` і поточний UGS evaluation profile; `synthetic-contract-only` не допускається
-- для релізної збірки задано й зафіксовано `UGS_BUILD_VERSION` (commit/deployment identifier), а fingerprint зіставлено із server-side configuration log
+- релізний деплой зроблено через `npm run deploy`, який штампує `UGS_BUILD_VERSION` поточним комітом; у configuration log немає суфікса `-dirty`, а fingerprint і коміт занесені до журналу змін безпеки
 - ручна перевірка desktop/mobile, клавіатури й screen-reader назв
 - перевірка створення, перемикання й тимчасовості кількох чатів
 - перевірка PII, кризових фраз, чутливих освітніх тем і небезпечних HTML-артефактів

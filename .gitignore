@@ -7,6 +7,9 @@ worker/
 node_modules/
 dist/
 
+# Локальні налаштування інструментів (машинозалежні)
+.claude/settings.local.json
+
 # Системне
 .DS_Store
 Thumbs.db
