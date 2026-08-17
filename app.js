@@ -11,6 +11,9 @@
   const MOBILE_DEVICE_KEY = "ugs_chat_mobile_device_v1";
   const ARTIFACT_SANDBOX_URL = "sandbox.html?v=22";
   const TECHNICAL_CONTACT = "Якщо проблема повторюється, звернися до пана Артема, вчителя інформатики.";
+  const PERSONAL_DATA_MESSAGE = "Для роботи зі мною особисті дані не потрібні. Прибери ім’я, вік, адресу, телефон, email, пароль або інші дані про себе чи інших людей і постав запитання без них.";
+  const MENTAL_HEALTH_SUPPORT_MESSAGE = "Дякую, що написав про це. Я не передаватиму цю особисту інформацію моделі. Будь ласка, розкажи дорослому, якому довіряєш, шкільному психологу або лікарю. Якщо тобі стає небезпечно чи з’являються думки нашкодити собі — негайно звернися до дорослого поруч.";
+  const HEALTH_PRIVACY_MESSAGE = "Я не передаватиму особисті дані про твоє здоров’я моделі. Якщо потрібна допомога щодо твого стану, звернися до батьків, опікуна, медпрацівника або іншого дорослого. Навчальне питання можна поставити без власного діагнозу, наприклад: «Що таке астма?».";
 
   const state = {
     chats: [],
@@ -942,11 +945,164 @@
     el.input.style.height = "auto";
   }
 
+  const personalNameTokenSource = String.raw`\p{Lu}[\p{L}'’\-]{1,30}`;
+  const personalNameSequenceSource = `${personalNameTokenSource}(?:\\s+${personalNameTokenSource}){0,2}`;
+  const explicitPersonalNamePattern = new RegExp(
+    String.raw`(?<![\p{L}\p{N}_])(?:мене\s+(?:звати|звуть|зовуть|кличуть)|(?:можеш|можете|можна)?\s*(?:звати|кликати)\s+мене|звати\s+мене|звус[ья]|мо[єя]\s+(?:повне\s+)?ім['’]?я|мо[єя]\s+(?:прізвище|по\s+батькові)|піб|my\s+(?:name|full\s+name|surname|last\s+name)\s+is|меня\s+(?:зовут|звать)|моя\s+фамилия)\s*[:=—–-]?\s+${personalNameSequenceSource}`,
+    "iu"
+  );
+  const sentencePersonalNamePattern = new RegExp(
+    String.raw`(?:^|[.!?…]\s+|,\s+|(?:[Пп]ривіт|[Вв]ітаю|[Хх]ай|[Hh]ello|[Hh]i)\s*[,!—–-]?\s+)(?:[Аа]\s+)?[Яя]\s*(?:[:—–-]\s*)?${personalNameSequenceSource}(?=\s*(?:$|[,.!?;:]|\s+а\s+(?:ти|ви|тебе|вас)(?![\p{L}\p{N}_])))`,
+    "u"
+  );
+  const englishPersonalNamePattern = new RegExp(
+    String.raw`(?:^|[.!?…]\s+|,\s+)(?:I\s+am|I['’]m)\s+${personalNameSequenceSource}(?=\s*(?:$|[,.!?;:]))`,
+    "u"
+  );
+  const ageValueSource = String.raw`(?:[1-9]|1[0-8]|од(?:ин|на)|дв[аі]|три|чотири|п['’]?ять|шість|сім|вісім|дев['’]?ять|десять|одинадцять|дванадцять|тринадцять|чотирнадцять|п['’]?ятнадцять|шістнадцять|сімнадцять|вісімнадцять)`;
+  const personalAgePattern = new RegExp(
+    String.raw`(?:^|[.!?…]\s+|,\s+)(?:а\s+)?(?:мені|мне)\s+(?:(?:вже|майже|скоро|приблизно|десь|уже|почти)\s+)?${ageValueSource}(?:\s+з\s+половиною)?\s*(?:(?:рок(?:ів|и|у)?|рочк(?:и|ів|у|а)?|літ|лет|года?|годик(?:а|ів|ов|и)?)(?![\p{L}\p{N}_]))?(?=\s*(?:$|[,.!?;:]|\s+(?:а|і|но)(?![\p{L}\p{N}_])))`,
+    "iu"
+  );
+  const incompletePersonalDataLeadPattern = /^(?:мене(?:\s+(?:звати|звуть|зовуть|кличуть))?|звати\s+мене|мо[єя]\s+(?:ім['’]?я|прізвище|по\s+батькові)|піб|я|мені|мне|мій\s+вік|моя\s+адреса|мій\s+(?:телефон|телеграм)|моя\s+школа|мій\s+клас)\s*[:=—–-]?$/iu;
+
+  // Раннє UX-блокування не дає очевидним PII залишити браузер.
+  // Worker повторює ту саму матрицю як обов'язкову межу безпеки.
+  function looksLikeObviousPersonalData(text) {
+    const value = normalizeBrowserPrivacyText(text);
+    if (explicitPersonalNamePattern.test(value) || sentencePersonalNamePattern.test(value) || englishPersonalNamePattern.test(value) || personalAgePattern.test(value)) {
+      return true;
+    }
+    const patterns = [
+      /(?<![\p{L}\p{N}_])[\w.%+-]+@[\w.-]+\.[A-Za-zА-Яа-яІіЇїЄє]{2,}(?![\p{L}\p{N}_])/u,
+      /(?<![\p{L}\p{N}_])[\w.%+-]{1,64}\s*(?:@|\[at\]|\(at\)|\s+собака\s+)[\s]*[\w.-]+\s*(?:\.|\[dot\]|\(dot\)|\s+крапка\s+)[\s]*[A-Za-zА-Яа-яІіЇїЄє]{2,}(?![\p{L}\p{N}_])/iu,
+      /(?:^|[^\d])(?:\+380[\s().-]?\d{2}[\s().-]?\d{3}[\s.-]?\d{2}[\s.-]?\d{2}|0\d{2}[\s().-]?\d{3}[\s.-]?\d{2}[\s.-]?\d{2})(?!\d)/u,
+      /(?<!\d)\+\d(?:[\s().-]?\d){7,14}(?!\d)/u,
+      /(?<![\p{L}\p{N}_])(?:телефон|номер\s+телефону|тел\.?|phone|mobile)(?![\p{L}\p{N}_])\s*[:=]?\s*\+?\d[\d\s().-]{6,18}\d/iu,
+      /(?<![\p{L}\p{N}_])(?:парол(?:ь|я)|password|pin[-\s]?код|cvv|cvc)(?![\p{L}\p{N}_])\s*[:=]\s*\S+/iu,
+      /(?<![\p{L}\p{N}_])(?:парол(?:ь|я)|password)\s+(?:\S*\d\S*|[A-Za-z][A-Za-z0-9!@#$%^&*_-]{5,})(?![\p{L}])/iu,
+      /(?<![\p{L}\p{N}_])(?:otp|одноразовий\s+код|код\s+(?:із|з)\s+смс|код\s+підтвердження|verification\s+code)(?![\p{L}\p{N}_])\s*[:=]?\s*\d{4,8}(?!\d)/iu,
+      /(?<![\p{L}\p{N}_])(?:номер\s+карт(?:ки|и)|card\s+number)(?![\p{L}\p{N}_])\s*[:=]?\s*(?:\d[ -]?){12,19}/iu,
+      /(?:^|[.!?…]\s+|,\s+)(?:а\s+)?(?:мені|мне)\s+(?:буде|виповнил(?:ося|ось)|исполни(?:лось|тся))\s+\d{1,2}(?!\d)/iu,
+      /(?<![\p{L}\p{N}_])(?:я|i\s+am|i['’]?m)\s+\d{1,2}[-\s]?(?:річн(?:ий|а)|летн(?:ий|яя)|years?\s+old)(?![\p{L}\p{N}_])/iu,
+      /(?<![\p{L}\p{N}_])(?:мій\s+вік|мой\s+возраст|age)(?![\p{L}\p{N}_])\s*[:=—–-]?\s*\d{1,2}(?!\d)/iu,
+      /(?<![\p{L}\p{N}_])(?:я\s+живу\s+(?:за\s+)?адресою|моя\s+адреса|домашня\s+адреса)(?![\p{L}\p{N}_])/iu,
+      /(?<![\p{L}\p{N}_])(?:я\s+живу|ми\s+живемо)\s+(?:у|в|на)\s+\p{L}[^.!?\n]{1,80}/iu,
+      /(?<![\p{L}\p{N}_])(?:я\s+родом\s+(?:з|із)|я\s+(?:з|із)\s+(?:міста|села|селища|смт))\s+\p{Lu}[\p{L}'’\-]{2,}(?![\p{L}\p{N}_])/u,
+      /(?<![\p{L}\p{N}_])я\s+(?:з|із)\s+\p{Lu}[\p{L}'’\-]{2,}(?=\s*(?:$|[.!?]))/u,
+      /(?<![\p{L}\p{N}_])м(?:ою|ого|оєї|ої|оя|ій)\s+(?:мам|матір|тат|батьк|сестр|брат|бабус|дідус|дід|опікун|вітчим|мачух|друг|подруг|вчител|одноклас|тренер)\p{L}*\s+(?:звати|звуть|зовуть|кличуть|[:—–-])\s+\p{L}{2,}/iu,
+      /(?<![\p{L}\p{N}_])my\s+(?:mother|mom|mum|dad|father|sister|brother|grandma|grandpa|guardian)(?:['’]s)?\s+name\s+is\s+\p{L}{2,}/iu,
+      /(?<![\p{L}\p{N}_])(?:паспорт|ідентифікаційний\s+код|рнокпп|свідоцтво\s+про\s+народження|учнівський\s+квиток|student\s+id)(?![\p{L}\p{N}_])\s*[:№#]?\s*[A-ZА-ЯІЇЄҐ0-9-]{5,}/iu,
+      /(?<![A-Z0-9])UA\d{27}(?![A-Z0-9])/iu,
+      /(?<![\p{L}\p{N}_])(?:(?:мій|моя|my)\s+(?:telegram|телеграм|instagram|інстаграм|discord|tiktok|тікток)\s*[:=]?|(?:telegram|телеграм|instagram|інстаграм|discord|tiktok|тікток|нік|username|handle)\s*[:=])\s*@?[\p{L}\p{N}_.-]{2,32}/iu,
+      /(?:https?:\/\/)?(?:t\.me|instagram\.com|tiktok\.com\/@|discord\.gg)\/[\w.-]{2,}/iu,
+      /(?<![\p{L}\p{N}_])(?:моя\s+школа|я\s+(?:навчаюся|вчуся)\s+(?:у|в)|my\s+school)(?![\p{L}\p{N}_])[^.!?\n]{1,90}/iu,
+      /(?<![\p{L}\p{N}_])(?:мій\s+клас\s*[:=—–-]?\s*\d{1,2}(?:\s*[-–—]?\s*[А-ЯІЇЄҐA-Z](?![\p{L}\p{N}_])|(?=\s*(?:$|[,.!?;:])))|я\s+(?:у|в|з)\s+\d{1,2}(?:\s*[-–—]?\s*[А-ЯІЇЄҐA-Z])?\s+клас(?:і|у))(?![\p{L}\p{N}_])/u,
+      /(?<![\p{L}\p{N}_])(?:дата\s+народження|народився|народилася|date\s+of\s+birth|dob)(?![\p{L}\p{N}_])\s*[:=-]?\s*\d{1,4}[./-]\d{1,2}[./-]\d{1,4}/iu,
+      /(?<![\p{L}\p{N}_])(?:я\s+народи(?:вся|лася|лась)|м(?:ій|оя)\s+(?:день|дата)\s+народження|i\s+was\s+born)(?![\p{L}\p{N}_])[^.!?\n]{0,24}?\d{1,2}\s+(?:січн|лют|берез|квітн|травн|червн|липн|серпн|вересн|жовтн|листопад|грудн)\p{L}*/iu,
+      /(?<![\p{L}\p{N}_])(?:координати|геолокація|location|coordinates)(?![\p{L}\p{N}_])\s*[:=]?\s*-?\d{1,3}(?:\.\d+)?\s*[,;]\s*-?\d{1,3}(?:\.\d+)?/iu,
+      /(?<![\p{L}\p{N}_])(?:ip|ip[-\s]?адреса)(?![\p{L}\p{N}_])\s*[:=]\s*(?:\d{1,3}\.){3}\d{1,3}/iu,
+      /(?<![\p{L}\p{N}_])(?:медична\s+картка|номер\s+пацієнта|діагноз|medical\s+record|diagnosis)(?![\p{L}\p{N}_])\s*[:=]\s*\S[^.!?\n]{1,80}/iu,
+      /(?<![\p{L}\p{N}_])(?:у\s+мене|в\s+мене|i\s+have)\s+(?:діагноз\s+)?(?:астм|алергі|діабет|епілепс|депрес|тривожн|аутизм|adhd|сдуг)\p{L}*[^.!?\n]{0,60}/iu
+    ];
+    if (patterns.some((pattern) => pattern.test(value))) return true;
+    return findObviousPaymentCardNumber(value);
+  }
+
+  function normalizeBrowserPrivacyText(text) {
+    return String(text || "")
+      .normalize("NFKC")
+      .replace(/[\u200B-\u200D\u2060\uFEFF]/g, "");
+  }
+
+  function hasSplitPersonalData(previousTexts, latestText) {
+    const previous = previousTexts.slice(-3).map((text) => normalizeBrowserPrivacyText(text).trim());
+    for (let start = 0; start < previous.length; start += 1) {
+      const lead = previous.slice(start).join(" ").trim();
+      if (!incompletePersonalDataLeadPattern.test(lead)) continue;
+      if (looksLikeObviousPersonalData(`${lead} ${latestText}`)) return true;
+    }
+    return false;
+  }
+
+  function browserNeedsImmediateSupport(text) {
+    const value = normalizeBrowserPrivacyText(text).toLowerCase().replace(/[’`]/g, "'").replace(/\s+/g, " ").trim();
+    const patterns = [
+      /(я\s+)?хочу\s+(померти|умереть|вбити\s+себе|убить\s+себя)/u,
+      /(я\s+)?не\s+хочу\s+(жити|жить)/u,
+      /(краще|лучше)\s+(б\s+)?(я\s+)?(помер|померла|умер|умерла)/u,
+      /(думаю\s+про|думаю|хочу)\s+(про\s+)?самогубств/u,
+      /\b(suicide|kill\s+myself|want\s+to\s+die|don't\s+want\s+to\s+live)\b/i,
+      /(зробити|сделать)\s+собі\s+(боляче|вред|шкоду)/u,
+      /(краще\s+б\s+я\s+не\s+прокинув|хочу\s+зникнути\s+назавжди|немає\s+сенсу\s+жити)/u,
+      /(хочу|збираюся|планую)\s+(стрибнути\s+з|порізати\s+себе|прийняти\s+(?:усі|багато)\s+таблет)/u,
+      /\b(can't\s+go\s+on|better\s+off\s+dead|end\s+it\s+all|(?:plan|going|want)\s+to\s+overdose)\b/i
+    ];
+    return patterns.some((pattern) => pattern.test(value));
+  }
+
+  function localBrowserHealthResponse(text) {
+    const value = normalizeBrowserPrivacyText(text);
+    const disclosurePrefix = String.raw`(?<![\p{L}\p{N}_])(?:у\s+мене|в\s+мене|мені\s+(?:поставили\s+діагноз|діагностували)|i\s+have)\s+(?:діагноз\s+)?`;
+    if (new RegExp(`${disclosurePrefix}(?:депрес|тривожн|панічн|аутизм|adhd|сдуг)\\p{L}*[^.!?\\n]{0,60}`, "iu").test(value)) {
+      return { type: "support", text: MENTAL_HEALTH_SUPPORT_MESSAGE };
+    }
+    if (new RegExp(`${disclosurePrefix}(?:астм|алергі|діабет|епілепс)\\p{L}*[^.!?\\n]{0,60}`, "iu").test(value)) {
+      return { type: "guardrail", kind: "safety", text: HEALTH_PRIVACY_MESSAGE };
+    }
+    return null;
+  }
+
+  function findObviousPaymentCardNumber(text) {
+    const candidates = String(text || "").match(/(?<!\d)(?:\d[ -]?){13,19}(?!\d)/g) || [];
+    return candidates.some((candidate) => {
+      const digits = candidate.replace(/\D/g, "");
+      return digits.length >= 13 && digits.length <= 19 && passesBrowserLuhn(digits);
+    });
+  }
+
+  function passesBrowserLuhn(digits) {
+    let sum = 0;
+    let doubleNext = false;
+    for (let index = digits.length - 1; index >= 0; index -= 1) {
+      let value = Number(digits[index]);
+      if (doubleNext) {
+        value *= 2;
+        if (value > 9) value -= 9;
+      }
+      sum += value;
+      doubleNext = !doubleNext;
+    }
+    return sum % 10 === 0;
+  }
+
   async function sendMessage(text) {
     const clean = String(text || "").trim();
     const chat = ensureChat();
     if (!clean || state.activeRequest || !state.networkAllowed || chat.turns >= MAX_TURNS || chat.sessionBroken) return;
     if (state.isMobile && state.mobileDailyBlocked && !chat.mobileSessionActivated) return;
+
+    const needsImmediateSupport = browserNeedsImmediateSupport(clean);
+    if (!needsImmediateSupport) {
+      const healthResponse = localBrowserHealthResponse(clean);
+      if (healthResponse) {
+        el.input.value = "";
+        resetInputHeight();
+        appendEntry(chat, healthResponse);
+        return;
+      }
+
+      const previousUserTexts = chat.entries
+        .filter((entry) => entry?.role === "user")
+        .slice(-3)
+        .map((entry) => entry.text);
+      if (looksLikeObviousPersonalData(clean) || hasSplitPersonalData(previousUserTexts, clean)) {
+        el.input.value = "";
+        resetInputHeight();
+        appendEntry(chat, { type: "guardrail", kind: "safety", text: PERSONAL_DATA_MESSAGE });
+        return;
+      }
+    }
 
     const requestId = ++state.requestSequence;
     state.activeRequest = { id: requestId, chatId: chat.id };
@@ -1053,6 +1209,12 @@
     }
     if (data.code === "PII_DETECTED") {
       appendEntry(chat, { type: "guardrail", kind: "safety", text: message || "Прибери особисті дані та спробуй ще раз." });
+      return;
+    }
+    if (data.code === "PII_HISTORY_DETECTED") {
+      chat.conversationState = null;
+      chat.sessionBroken = true;
+      appendEntry(chat, { type: "guardrail", kind: "safety", text: message || "У попередніх повідомленнях є особисті дані. Почни новий чат без них." });
       return;
     }
     if (data.code === "TURN_LIMIT") {
