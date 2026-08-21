@@ -339,6 +339,7 @@
   function appendEntry(chat, entry) {
     chat.entries.push(entry);
     if (chat.id === state.activeChatId) {
+      removeThinkingMessage();
       renderEntry(entry);
       setConversationMode(true);
       scrollConversationToBottom();
@@ -347,6 +348,13 @@
     }
     renderChatList();
     updateConversationActions();
+  }
+
+  // Індикатор «думаю» знімаємо точково. Повний перерендер списку зруйнував би
+  // щойно змонтований кадр проєкту: пісочниця почала б вантажитися вдруге, а
+  // дочірній процес міряв би себе просто посеред перебудови DOM.
+  function removeThinkingMessage() {
+    for (const row of el.messages.querySelectorAll(".message.thinking")) row.remove();
   }
 
   function renderActiveChat() {
@@ -702,12 +710,6 @@
     frame.title = `Ізольований перегляд: ${artifact.title || artifactTypeLabel(artifact.type)}`;
     frame.setAttribute("sandbox", "allow-scripts");
     frame.setAttribute("referrerpolicy", "no-referrer");
-    mountArtifactPreview(frame, buildSandboxedHtml(artifact.html), () => {
-      const note = document.createElement("div");
-      note.className = "artifact-preview-fallback";
-      note.textContent = "Перегляд не вдалося показати в цьому браузері. Відкрий вкладку «Код» або завантаж файл — проєкт працює локально.";
-      preview.appendChild(note);
-    });
     preview.appendChild(frame);
 
     const codePanel = document.createElement("div");
@@ -788,6 +790,22 @@
     wrap.appendChild(card);
     row.appendChild(wrap);
     el.messages.appendChild(row);
+
+    // Завантаження пісочниці стартує лише тепер, коли рядок уже в документі й
+    // має справжній розмір. У від'єднаного кадру розміру ще немає, і дочірній
+    // процес може розкластися по ширині вікна, а не картки.
+    mountArtifactPreview(frame, buildSandboxedHtml(artifact.html, { measureViewport: true }), (show) => {
+      const existing = preview.querySelector(".artifact-preview-fallback");
+      if (!show) {
+        if (existing) existing.remove();
+        return;
+      }
+      if (existing) return;
+      const note = document.createElement("div");
+      note.className = "artifact-preview-fallback";
+      note.textContent = "Перегляд не вдалося показати в цьому браузері. Відкрий вкладку «Код» або завантаж файл — проєкт працює локально.";
+      preview.insertBefore(note, frame);
+    });
     return row;
   }
 
@@ -830,6 +848,12 @@
   function mountArtifactPreview(frame, html, onUnavailable) {
     let delivered = false;
     let confirmed = false;
+    let notified = false;
+    let attempt = 0;
+    let recheck = false;
+    let fallbackTimer = 0;
+    let measureTimer = 0;
+    let lastWidth = 0;
 
     const deliver = () => {
       if (delivered || !frame.contentWindow) return;
@@ -837,43 +861,123 @@
       frame.contentWindow.postMessage({ ugsSandbox: "render", html }, "*");
     };
 
+    // Якщо пісочниця не підтвердила показ, залишати порожній кадр не можна:
+    // підказуємо учневі перейти на «Код» або завантажити файл.
+    const armFallback = () => {
+      window.clearTimeout(fallbackTimer);
+      fallbackTimer = window.setTimeout(() => {
+        if (confirmed || notified) return;
+        notified = true;
+        onUnavailable(true);
+      }, 4000);
+    };
+
+    const load = () => {
+      delivered = false;
+      confirmed = false;
+      recheck = false;
+      armFallback();
+      frame.src = attempt ? `${ARTIFACT_SANDBOX_URL}&r=${attempt}` : ARTIFACT_SANDBOX_URL;
+    };
+
+    const askMeasure = () => {
+      if (!confirmed || !frame.contentWindow) return;
+      try {
+        frame.contentWindow.postMessage({ ugsSandbox: "measure" }, "*");
+      } catch {
+        // Кадру вже немає — міряти нічого.
+      }
+    };
+
+    const scheduleMeasure = () => {
+      window.clearTimeout(measureTimer);
+      measureTimer = window.setTimeout(askMeasure, 260);
+    };
+
+    // Кадр проєкту має opaque origin, тож малюється окремим процесом, який
+    // дізнається свій розмір окремим повідомленням браузера. Якщо він устиг
+    // розкластися раніше, проєкт будується по ширині вікна, а не картки — і
+    // сайт виглядає обрізаним. Ловимо це, порівнюючи заявлену ширину з
+    // фактичною, і перемонтовуємо кадр.
+    const onViewport = (reported) => {
+      const expected = frame.clientWidth;
+      if (!expected || !Number.isFinite(reported) || reported <= 0) return;
+      if (Math.abs(reported - expected) <= 2) {
+        recheck = false;
+        return;
+      }
+      // Одноразове розходження — це, найімовірніше, мить під час зміни розміру
+      // вікна. Перемонтовуємо лише тоді, коли ширина й на повторний запит чужа.
+      if (!recheck) {
+        recheck = true;
+        scheduleMeasure();
+        return;
+      }
+      recheck = false;
+      if (attempt >= 2) return;
+      attempt += 1;
+      load();
+    };
+
     const onMessage = (event) => {
       if (!frame.contentWindow || event.source !== frame.contentWindow) return;
-      const kind = event.data && event.data.ugsSandbox;
+      const data = event.data;
+      const kind = data && data.ugsSandbox;
       if (kind === "ready") {
         deliver();
       } else if (kind === "rendered") {
         confirmed = true;
-        window.clearTimeout(timer);
+        window.clearTimeout(fallbackTimer);
+        if (notified) {
+          notified = false;
+          onUnavailable(false);
+        }
+      } else if (kind === "viewport") {
+        onViewport(Number(data.width));
       }
     };
 
-    // Якщо пісочниця не підтвердила показ, залишати порожній кадр не можна:
-    // підказуємо учневі перейти на «Код» або завантажити файл.
-    const timer = window.setTimeout(() => {
-      if (!confirmed) onUnavailable();
-    }, 4000);
+    // Ширина кадру змінюється разом із вікном, сайдбаром і повноекранним
+    // режимом; після кожної такої зміни просимо проєкт перевіритися.
+    const observer = typeof ResizeObserver === "function"
+      ? new ResizeObserver(() => {
+          const width = frame.clientWidth;
+          if (!width || width === lastWidth) return;
+          lastWidth = width;
+          scheduleMeasure();
+        })
+      : null;
 
     window.addEventListener("message", onMessage);
     frame.addEventListener("load", deliver);
+    if (observer) observer.observe(frame);
     state.artifactCleanups.push(() => {
       window.removeEventListener("message", onMessage);
-      window.clearTimeout(timer);
+      window.clearTimeout(fallbackTimer);
+      window.clearTimeout(measureTimer);
+      if (observer) observer.disconnect();
     });
 
-    frame.src = ARTIFACT_SANDBOX_URL;
+    load();
   }
 
-  function buildSandboxedHtml(html) {
+  function buildSandboxedHtml(html, options) {
     const csp = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data: blob:; media-src 'none'; connect-src 'none'; font-src 'none'; frame-src 'none'; child-src 'none'; worker-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'; navigate-to 'none'">`;
     const viewport = `<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">`;
     const responsiveGuard = `<style id="ugs-responsive-guard">html,body{max-width:100%;min-width:0;overflow-x:hidden;scroll-behavior:smooth}*,*::before,*::after{box-sizing:border-box}img,svg,video,canvas{max-width:100%}img,svg,video{height:auto}table{max-width:100%}pre,code{max-width:100%;white-space:pre-wrap;overflow-wrap:anywhere}body{margin:0}body *{max-width:100%}</style>`;
     const navigationGuard = `<script id="ugs-navigation-guard">(()=>{const scrollToHash=raw=>{if(!raw||raw==="#")return;let id=raw.slice(1);try{id=decodeURIComponent(id)}catch{}const target=document.getElementById(id);if(target)target.scrollIntoView({behavior:"smooth",block:"start"})};addEventListener("click",event=>{const anchor=event.target&&event.target.closest?event.target.closest("a[href]"):null;if(!anchor)return;const href=(anchor.getAttribute("href")||"").trim();event.preventDefault();if(href.startsWith("#"))scrollToHash(href)},true);addEventListener("submit",event=>event.preventDefault(),true);try{window.open=()=>null;history.pushState=()=>null;history.replaceState=()=>null}catch{}})();</script>`;
+    // Тільки для перегляду: проєкт сам повідомляє сторінці свій viewport, щоб
+    // та помітила кадр, який розклався по чужій ширині. У копію та в
+    // завантажений файл ця службова частина не потрапляє.
+    const viewportReporter = options && options.measureViewport
+      ? `<script id="ugs-viewport-reporter">(()=>{if(window.parent===window)return;const send=()=>{try{window.parent.postMessage({ugsSandbox:"viewport",width:window.innerWidth},"*")}catch{}};addEventListener("resize",send);addEventListener("load",send);addEventListener("message",event=>{if(event.data&&event.data.ugsSandbox==="measure")send()});send()})();</script>`
+      : "";
+    const head = `${csp}${viewport}${responsiveGuard}${navigationGuard}${viewportReporter}`;
     const source = String(html || "");
     if (/<head[\s>]/i.test(source)) {
-      return source.replace(/<head([^>]*)>/i, `<head$1>${csp}${viewport}${responsiveGuard}${navigationGuard}`);
+      return source.replace(/<head([^>]*)>/i, `<head$1>${head}`);
     }
-    return `<!doctype html><html><head><meta charset="utf-8">${csp}${viewport}${responsiveGuard}${navigationGuard}</head><body>${source}</body></html>`;
+    return `<!doctype html><html><head><meta charset="utf-8">${head}</head><body>${source}</body></html>`;
   }
 
   function shouldIncludeArtifactContext(text, chat) {
@@ -1113,7 +1217,12 @@
     appendEntry(chat, { type: "message", role: "user", text: clean });
     el.input.value = "";
     resetInputHeight();
-    renderActiveChat();
+    // Дописуємо індикатор до наявного списку. Перебудова всього чату тут
+    // перезавантажувала б кадри вже показаних проєктів на кожному запиті.
+    renderThinkingMessage(clean);
+    updateComposerState();
+    updateMobileLimitUI();
+    scrollConversationToBottom();
 
     try {
       const response = await fetch(`${API_URL}/chat`, {
@@ -1193,7 +1302,10 @@
       renderChatList();
       updateMobileLimitUI();
       if (chat.id === state.activeChatId) {
-        renderActiveChat();
+        removeThinkingMessage();
+        setConversationMode(chat.entries.length > 0);
+        updateComposerState();
+        updateConversationActions();
         if (!el.input.disabled) el.input.focus();
       } else {
         updateComposerState();

@@ -1325,6 +1325,11 @@ body.artifact-fullscreen-open {
 .artifact-preview {
   padding: 10px;
   min-width: 0;
+  /* Проєкт живе в кадрі з окремим процесом рендерингу. Власний шар і обрізання
+     тут потрібні, щоб такий кадр не малювався поверх картки, якщо він раптом
+     виявиться ширшим за неї: Safari та Chrome на macOS це вміють. */
+  overflow: hidden;
+  isolation: isolate;
 }
 .artifact-frame {
   display: block;
